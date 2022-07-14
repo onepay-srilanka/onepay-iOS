@@ -8,6 +8,30 @@
 		<data>
 		MRTF0Qp9p0a0G6GX5TSPxLVfsfw=
 		</data>
+		<key>Frameworks/Alamofire.framework/Alamofire</key>
+		<data>
+		o/vTblRu0jZK+Wx0ME7w3Vq1qJQ=
+		</data>
+		<key>Frameworks/Alamofire.framework/Info.plist</key>
+		<data>
+		ljNoIE+8uG0o8vjAghxNIQVfyoU=
+		</data>
+		<key>Frameworks/Alamofire.framework/_CodeSignature/CodeResources</key>
+		<data>
+		scODRJJuG2F/dwRlF8wAECtCJlM=
+		</data>
+		<key>Frameworks/MPGSDK.framework/Info.plist</key>
+		<data>
+		qjtIgQ+qIGSgq7hKuxSTt5fCH6o=
+		</data>
+		<key>Frameworks/MPGSDK.framework/MPGSDK</key>
+		<data>
+		Zp7ZAwZokm+oswsQ6cfvqjUNXzM=
+		</data>
+		<key>Frameworks/MPGSDK.framework/_CodeSignature/CodeResources</key>
+		<data>
+		nsxQxfN0SNfCNykt3GieEQuPdGA=
+		</data>
 		<key>Headers/OnepayIPG-Swift.h</key>
 		<data>
 		4f1jLwS/M0F28MsGkKwUmPiF23w=
@@ -100,6 +124,48 @@
 			<key>hash2</key>
 			<data>
 			ox/ZuhXjwlyyjLYBXya14FjYtxi693IbCMfiy7UQu14=
+			</data>
+		</dict>
+		<key>Frameworks/Alamofire.framework/Alamofire</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			71f3elRbp1Goi5JuTPHsMavLZh3v2uno0Nl3Ekv0vAg=
+			</data>
+		</dict>
+		<key>Frameworks/Alamofire.framework/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			hrOM4+9cdJGIp1xg4/3HLLZC78e1qfWwoVNVbPB1B+U=
+			</data>
+		</dict>
+		<key>Frameworks/Alamofire.framework/_CodeSignature/CodeResources</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			8Vnjy7YlviTzlTB1Sqz/Q1hiog4ZV9aBfRsu5deXHVE=
+			</data>
+		</dict>
+		<key>Frameworks/MPGSDK.framework/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			nalco9Q8JPI/DTmRDbb2nEkr7b4Q4Uog9xv1Dcnd4xk=
+			</data>
+		</dict>
+		<key>Frameworks/MPGSDK.framework/MPGSDK</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Om3d7RQPQyNSXtMCs+AeZ1c2WdzPDNVw0CbjLID0DP8=
+			</data>
+		</dict>
+		<key>Frameworks/MPGSDK.framework/_CodeSignature/CodeResources</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			NZNJo6jg3P2GZzso6xlVuUTxzPDkTesknBMthH86eRM=
 			</data>
 		</dict>
 		<key>Headers/OnepayIPG-Swift.h</key>

@@ -8,6 +8,30 @@
 		<data>
 		MRTF0Qp9p0a0G6GX5TSPxLVfsfw=
 		</data>
+		<key>Frameworks/Alamofire.framework/Alamofire</key>
+		<data>
+		aiiXsZJGzicI0f5HNqeRDkGqsMU=
+		</data>
+		<key>Frameworks/Alamofire.framework/Info.plist</key>
+		<data>
+		JMwJuGrM1s3oKMAO7t1HUS1k0yA=
+		</data>
+		<key>Frameworks/Alamofire.framework/_CodeSignature/CodeResources</key>
+		<data>
+		OzUOHe0grjxx2I8QdDfASa5lc7c=
+		</data>
+		<key>Frameworks/MPGSDK.framework/Info.plist</key>
+		<data>
+		+hxLQMqlOmWrfyhSYFGuAH9fuDw=
+		</data>
+		<key>Frameworks/MPGSDK.framework/MPGSDK</key>
+		<data>
+		omKZibtKkO99Kl57/8hD+zTaeog=
+		</data>
+		<key>Frameworks/MPGSDK.framework/_CodeSignature/CodeResources</key>
+		<data>
+		C7M8VJlCbdJRjanwRd8iutsf2mA=
+		</data>
 		<key>Headers/OnepayIPG-Swift.h</key>
 		<data>
 		4ip28MQ8Jwki4S5x0Hj+4QvFde4=
@@ -112,6 +136,48 @@
 			<key>hash2</key>
 			<data>
 			ox/ZuhXjwlyyjLYBXya14FjYtxi693IbCMfiy7UQu14=
+			</data>
+		</dict>
+		<key>Frameworks/Alamofire.framework/Alamofire</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			xdREy2EBR/7s05cLT8MdMDDSBpybT/R6bFwBGjsIrX4=
+			</data>
+		</dict>
+		<key>Frameworks/Alamofire.framework/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			OE4mvjvQGzbg58MeH4KXAI6gDr2h1MiF1CQc2PeCNVU=
+			</data>
+		</dict>
+		<key>Frameworks/Alamofire.framework/_CodeSignature/CodeResources</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			iUZ3c3ky4pxsBrQB8Qdjzk0MbBxNtXwe1DoULL2Lj4U=
+			</data>
+		</dict>
+		<key>Frameworks/MPGSDK.framework/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Bsxcq4DV9HL0jwGy1VJ9sV4mvqa5igCkW0+F97z6tgU=
+			</data>
+		</dict>
+		<key>Frameworks/MPGSDK.framework/MPGSDK</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			RQuIfK0KtPFi2TevWQAcaxJp5ibzBY5ARy2eaq6okds=
+			</data>
+		</dict>
+		<key>Frameworks/MPGSDK.framework/_CodeSignature/CodeResources</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			7LTx4zVNgXus/SM0P5KTToZIkNplKT9TkXkKEVRr1F0=
 			</data>
 		</dict>
 		<key>Headers/OnepayIPG-Swift.h</key>
