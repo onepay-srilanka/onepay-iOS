@@ -10,7 +10,7 @@
 		</data>
 		<key>Frameworks/Alamofire.framework/Alamofire</key>
 		<data>
-		o/vTblRu0jZK+Wx0ME7w3Vq1qJQ=
+		r0xjgWXLek+TshDDdOOZw/rJ5R0=
 		</data>
 		<key>Frameworks/Alamofire.framework/Info.plist</key>
 		<data>
@@ -26,7 +26,7 @@
 		</data>
 		<key>Frameworks/MPGSDK.framework/MPGSDK</key>
 		<data>
-		Zp7ZAwZokm+oswsQ6cfvqjUNXzM=
+		pkXUapFapfDHZmUxiWcFmiByKL0=
 		</data>
 		<key>Frameworks/MPGSDK.framework/_CodeSignature/CodeResources</key>
 		<data>
@@ -54,11 +54,11 @@
 		</data>
 		<key>Modules/OnepayIPG.swiftmodule/arm64-apple-ios.swiftinterface</key>
 		<data>
-		th27cQL3ol4fj0t8302ufWHA3pU=
+		56iIzidTgc5JyWPYdyfe3Mh5gjI=
 		</data>
 		<key>Modules/OnepayIPG.swiftmodule/arm64-apple-ios.swiftmodule</key>
 		<data>
-		+7GmY82LS6GHciiv1DX6ucsy8kA=
+		2R+4z6zRFuzx/XRsWcrmEi+HmY8=
 		</data>
 		<key>Modules/module.modulemap</key>
 		<data>
@@ -130,7 +130,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			71f3elRbp1Goi5JuTPHsMavLZh3v2uno0Nl3Ekv0vAg=
+			Gsw77fYPkMlTV61qcmAljLAkzaLuTH5PytcqFXvEHBk=
 			</data>
 		</dict>
 		<key>Frameworks/Alamofire.framework/Info.plist</key>
@@ -158,7 +158,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Om3d7RQPQyNSXtMCs+AeZ1c2WdzPDNVw0CbjLID0DP8=
+			MLHmx2WE7PWK7r1WtBBD13L0q0KqiooVliWk1HK3Sqo=
 			</data>
 		</dict>
 		<key>Frameworks/MPGSDK.framework/_CodeSignature/CodeResources</key>
@@ -200,14 +200,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			2D0WxHcgPk1DurhIpQOg7Xe52E611upPC16bXuJOe1g=
+			xSTvqdD+rGzVtBMMuE/klWqgA52tbdxT3SUvMwolhOQ=
 			</data>
 		</dict>
 		<key>Modules/OnepayIPG.swiftmodule/arm64-apple-ios.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			8EhW/HyoMRRJbTgpMfjtvP5Mam5XBJszpN3L84yPb3o=
+			nBZTXaH25lVXZpsKUqKovZ3BwxSDe4HFjW+pmFJ9bT0=
 			</data>
 		</dict>
 		<key>Modules/module.modulemap</key>
