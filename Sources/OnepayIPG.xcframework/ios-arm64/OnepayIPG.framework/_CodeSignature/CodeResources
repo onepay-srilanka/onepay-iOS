@@ -10,7 +10,7 @@
 		</data>
 		<key>Frameworks/Alamofire.framework/Alamofire</key>
 		<data>
-		r0xjgWXLek+TshDDdOOZw/rJ5R0=
+		F3efhtoot/sxCNJJ3fGsgY7KDp8=
 		</data>
 		<key>Frameworks/Alamofire.framework/Info.plist</key>
 		<data>
@@ -19,18 +19,6 @@
 		<key>Frameworks/Alamofire.framework/_CodeSignature/CodeResources</key>
 		<data>
 		scODRJJuG2F/dwRlF8wAECtCJlM=
-		</data>
-		<key>Frameworks/MPGSDK.framework/Info.plist</key>
-		<data>
-		qjtIgQ+qIGSgq7hKuxSTt5fCH6o=
-		</data>
-		<key>Frameworks/MPGSDK.framework/MPGSDK</key>
-		<data>
-		pkXUapFapfDHZmUxiWcFmiByKL0=
-		</data>
-		<key>Frameworks/MPGSDK.framework/_CodeSignature/CodeResources</key>
-		<data>
-		nsxQxfN0SNfCNykt3GieEQuPdGA=
 		</data>
 		<key>Headers/OnepayIPG-Swift.h</key>
 		<data>
@@ -54,11 +42,11 @@
 		</data>
 		<key>Modules/OnepayIPG.swiftmodule/arm64-apple-ios.swiftinterface</key>
 		<data>
-		56iIzidTgc5JyWPYdyfe3Mh5gjI=
+		dpQrKXyLm2vXX4OMPIucvlPGM7I=
 		</data>
 		<key>Modules/OnepayIPG.swiftmodule/arm64-apple-ios.swiftmodule</key>
 		<data>
-		2R+4z6zRFuzx/XRsWcrmEi+HmY8=
+		EUTj4MmZyGZmqUPJC8vmGMojvoY=
 		</data>
 		<key>Modules/module.modulemap</key>
 		<data>
@@ -130,7 +118,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Gsw77fYPkMlTV61qcmAljLAkzaLuTH5PytcqFXvEHBk=
+			M6aF8tRUabcBD+Glc0jn40boaplqp2xHSsIuPfMuTL0=
 			</data>
 		</dict>
 		<key>Frameworks/Alamofire.framework/Info.plist</key>
@@ -145,27 +133,6 @@
 			<key>hash2</key>
 			<data>
 			8Vnjy7YlviTzlTB1Sqz/Q1hiog4ZV9aBfRsu5deXHVE=
-			</data>
-		</dict>
-		<key>Frameworks/MPGSDK.framework/Info.plist</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			nalco9Q8JPI/DTmRDbb2nEkr7b4Q4Uog9xv1Dcnd4xk=
-			</data>
-		</dict>
-		<key>Frameworks/MPGSDK.framework/MPGSDK</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			MLHmx2WE7PWK7r1WtBBD13L0q0KqiooVliWk1HK3Sqo=
-			</data>
-		</dict>
-		<key>Frameworks/MPGSDK.framework/_CodeSignature/CodeResources</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			NZNJo6jg3P2GZzso6xlVuUTxzPDkTesknBMthH86eRM=
 			</data>
 		</dict>
 		<key>Headers/OnepayIPG-Swift.h</key>
@@ -200,14 +167,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			xSTvqdD+rGzVtBMMuE/klWqgA52tbdxT3SUvMwolhOQ=
+			doOwHzKM6Vp/b7vt4nh+0Fta5kjOS4dFjaBYL7CDOM8=
 			</data>
 		</dict>
 		<key>Modules/OnepayIPG.swiftmodule/arm64-apple-ios.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			nBZTXaH25lVXZpsKUqKovZ3BwxSDe4HFjW+pmFJ9bT0=
+			VWlpY3zf/1kurpk30MLqi0b4QRwR/EGwSjHoYdkRlAw=
 			</data>
 		</dict>
 		<key>Modules/module.modulemap</key>
