@@ -1,0 +1,2378 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.6.1 (swiftlang-5.6.0.323.66 clang-1316.0.20.12)
+// swift-module-flags: -target x86_64-apple-ios11.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -module-name OnepayIPG
+import Combine
+import CommonCrypto
+import Dispatch
+import Foundation
+import MobileCoreServices
+@_exported import OnepayIPG
+import Swift
+import SystemConfiguration
+import UIKit
+import UniformTypeIdentifiers
+import WebKit
+import _Concurrency
+public protocol OnepayIPGDelegate {
+  func onPaymentSuccess(response: OnepayIPG.OnepayIPGSuccess)
+  func onPaymentFailed(error: OnepayIPG.OnepayIPGError)
+}
+public struct RequestAdapterState {
+  public let requestID: Foundation.UUID
+  public let session: OnepayIPG.Session
+}
+public protocol RequestAdapter {
+  func adapt(_ urlRequest: Foundation.URLRequest, for session: OnepayIPG.Session, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+  func adapt(_ urlRequest: Foundation.URLRequest, using state: OnepayIPG.RequestAdapterState, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+}
+extension OnepayIPG.RequestAdapter {
+  public func adapt(_ urlRequest: Foundation.URLRequest, using state: OnepayIPG.RequestAdapterState, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+}
+public enum RetryResult {
+  case retry
+  case retryWithDelay(Foundation.TimeInterval)
+  case doNotRetry
+  case doNotRetryWithError(Swift.Error)
+}
+public protocol RequestRetrier {
+  func retry(_ request: OnepayIPG.Request, for session: OnepayIPG.Session, dueTo error: Swift.Error, completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void)
+}
+public protocol RequestInterceptor : OnepayIPG.RequestAdapter, OnepayIPG.RequestRetrier {
+}
+extension OnepayIPG.RequestInterceptor {
+  public func adapt(_ urlRequest: Foundation.URLRequest, for session: OnepayIPG.Session, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+  public func retry(_ request: OnepayIPG.Request, for session: OnepayIPG.Session, dueTo error: Swift.Error, completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void)
+}
+public typealias AdaptHandler = (Foundation.URLRequest, OnepayIPG.Session, _ completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void) -> Swift.Void
+public typealias RetryHandler = (OnepayIPG.Request, OnepayIPG.Session, Swift.Error, _ completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void) -> Swift.Void
+open class Adapter : OnepayIPG.RequestInterceptor {
+  public init(_ adaptHandler: @escaping OnepayIPG.AdaptHandler)
+  open func adapt(_ urlRequest: Foundation.URLRequest, for session: OnepayIPG.Session, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+  open func adapt(_ urlRequest: Foundation.URLRequest, using state: OnepayIPG.RequestAdapterState, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+  @objc deinit
+}
+extension OnepayIPG.RequestAdapter where Self == OnepayIPG.Adapter {
+  public static func adapter(using closure: @escaping OnepayIPG.AdaptHandler) -> OnepayIPG.Adapter
+}
+open class Retrier : OnepayIPG.RequestInterceptor {
+  public init(_ retryHandler: @escaping OnepayIPG.RetryHandler)
+  open func retry(_ request: OnepayIPG.Request, for session: OnepayIPG.Session, dueTo error: Swift.Error, completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void)
+  @objc deinit
+}
+extension OnepayIPG.RequestRetrier where Self == OnepayIPG.Retrier {
+  public static func retrier(using closure: @escaping OnepayIPG.RetryHandler) -> OnepayIPG.Retrier
+}
+open class Interceptor : OnepayIPG.RequestInterceptor {
+  final public let adapters: [OnepayIPG.RequestAdapter]
+  final public let retriers: [OnepayIPG.RequestRetrier]
+  public init(adaptHandler: @escaping OnepayIPG.AdaptHandler, retryHandler: @escaping OnepayIPG.RetryHandler)
+  public init(adapter: OnepayIPG.RequestAdapter, retrier: OnepayIPG.RequestRetrier)
+  public init(adapters: [OnepayIPG.RequestAdapter] = [], retriers: [OnepayIPG.RequestRetrier] = [], interceptors: [OnepayIPG.RequestInterceptor] = [])
+  open func adapt(_ urlRequest: Foundation.URLRequest, for session: OnepayIPG.Session, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+  open func adapt(_ urlRequest: Foundation.URLRequest, using state: OnepayIPG.RequestAdapterState, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+  open func retry(_ request: OnepayIPG.Request, for session: OnepayIPG.Session, dueTo error: Swift.Error, completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void)
+  @objc deinit
+}
+extension OnepayIPG.RequestInterceptor where Self == OnepayIPG.Interceptor {
+  public static func interceptor(adapter: @escaping OnepayIPG.AdaptHandler, retrier: @escaping OnepayIPG.RetryHandler) -> OnepayIPG.Interceptor
+  public static func interceptor(adapter: OnepayIPG.RequestAdapter, retrier: OnepayIPG.RequestRetrier) -> OnepayIPG.Interceptor
+  public static func interceptor(adapters: [OnepayIPG.RequestAdapter] = [], retriers: [OnepayIPG.RequestRetrier] = [], interceptors: [OnepayIPG.RequestInterceptor] = []) -> OnepayIPG.Interceptor
+}
+public enum GatewayResult<T> {
+  case success(T)
+  case error(Swift.Error)
+  public init(_ result: T)
+  public init(_ result: Swift.Error)
+}
+public typealias Parameters = [Swift.String : Any]
+public protocol ParameterEncoding {
+  func encode(_ urlRequest: OnepayIPG.URLRequestConvertible, with parameters: OnepayIPG.Parameters?) throws -> Foundation.URLRequest
+}
+public struct URLEncoding : OnepayIPG.ParameterEncoding {
+  public enum Destination {
+    case methodDependent
+    case queryString
+    case httpBody
+    public static func == (a: OnepayIPG.URLEncoding.Destination, b: OnepayIPG.URLEncoding.Destination) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public enum ArrayEncoding {
+    case brackets
+    case noBrackets
+    case indexInBrackets
+    public static func == (a: OnepayIPG.URLEncoding.ArrayEncoding, b: OnepayIPG.URLEncoding.ArrayEncoding) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public enum BoolEncoding {
+    case numeric
+    case literal
+    public static func == (a: OnepayIPG.URLEncoding.BoolEncoding, b: OnepayIPG.URLEncoding.BoolEncoding) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public static var `default`: OnepayIPG.URLEncoding {
+    get
+  }
+  public static var queryString: OnepayIPG.URLEncoding {
+    get
+  }
+  public static var httpBody: OnepayIPG.URLEncoding {
+    get
+  }
+  public let destination: OnepayIPG.URLEncoding.Destination
+  public let arrayEncoding: OnepayIPG.URLEncoding.ArrayEncoding
+  public let boolEncoding: OnepayIPG.URLEncoding.BoolEncoding
+  public init(destination: OnepayIPG.URLEncoding.Destination = .methodDependent, arrayEncoding: OnepayIPG.URLEncoding.ArrayEncoding = .brackets, boolEncoding: OnepayIPG.URLEncoding.BoolEncoding = .numeric)
+  public func encode(_ urlRequest: OnepayIPG.URLRequestConvertible, with parameters: OnepayIPG.Parameters?) throws -> Foundation.URLRequest
+  public func queryComponents(fromKey key: Swift.String, value: Any) -> [(Swift.String, Swift.String)]
+  public func escape(_ string: Swift.String) -> Swift.String
+}
+public struct JSONEncoding : OnepayIPG.ParameterEncoding {
+  public enum Error : Swift.Error {
+    case invalidJSONObject
+    public static func == (a: OnepayIPG.JSONEncoding.Error, b: OnepayIPG.JSONEncoding.Error) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public static var `default`: OnepayIPG.JSONEncoding {
+    get
+  }
+  public static var prettyPrinted: OnepayIPG.JSONEncoding {
+    get
+  }
+  public let options: Foundation.JSONSerialization.WritingOptions
+  public init(options: Foundation.JSONSerialization.WritingOptions = [])
+  public func encode(_ urlRequest: OnepayIPG.URLRequestConvertible, with parameters: OnepayIPG.Parameters?) throws -> Foundation.URLRequest
+  public func encode(_ urlRequest: OnepayIPG.URLRequestConvertible, withJSONObject jsonObject: Any? = nil) throws -> Foundation.URLRequest
+}
+extension OnepayIPG.JSONEncoding.Error {
+  public var localizedDescription: Swift.String {
+    get
+  }
+}
+public protocol ParameterEncoder {
+  func encode<Parameters>(_ parameters: Parameters?, into request: Foundation.URLRequest) throws -> Foundation.URLRequest where Parameters : Swift.Encodable
+}
+open class JSONParameterEncoder : OnepayIPG.ParameterEncoder {
+  public static var `default`: OnepayIPG.JSONParameterEncoder {
+    get
+  }
+  public static var prettyPrinted: OnepayIPG.JSONParameterEncoder {
+    get
+  }
+  @available(macOS 10.13, iOS 11.0, tvOS 11.0, watchOS 4.0, *)
+  public static var sortedKeys: OnepayIPG.JSONParameterEncoder {
+    get
+  }
+  final public let encoder: Foundation.JSONEncoder
+  public init(encoder: Foundation.JSONEncoder = JSONEncoder())
+  open func encode<Parameters>(_ parameters: Parameters?, into request: Foundation.URLRequest) throws -> Foundation.URLRequest where Parameters : Swift.Encodable
+  @objc deinit
+}
+extension OnepayIPG.ParameterEncoder where Self == OnepayIPG.JSONParameterEncoder {
+  public static var json: OnepayIPG.JSONParameterEncoder {
+    get
+  }
+  public static func json(encoder: Foundation.JSONEncoder = JSONEncoder()) -> OnepayIPG.JSONParameterEncoder
+}
+open class URLEncodedFormParameterEncoder : OnepayIPG.ParameterEncoder {
+  public enum Destination {
+    case methodDependent
+    case queryString
+    case httpBody
+    public static func == (a: OnepayIPG.URLEncodedFormParameterEncoder.Destination, b: OnepayIPG.URLEncodedFormParameterEncoder.Destination) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public static var `default`: OnepayIPG.URLEncodedFormParameterEncoder {
+    get
+  }
+  final public let encoder: OnepayIPG.URLEncodedFormEncoder
+  final public let destination: OnepayIPG.URLEncodedFormParameterEncoder.Destination
+  public init(encoder: OnepayIPG.URLEncodedFormEncoder = URLEncodedFormEncoder(), destination: OnepayIPG.URLEncodedFormParameterEncoder.Destination = .methodDependent)
+  open func encode<Parameters>(_ parameters: Parameters?, into request: Foundation.URLRequest) throws -> Foundation.URLRequest where Parameters : Swift.Encodable
+  @objc deinit
+}
+extension OnepayIPG.ParameterEncoder where Self == OnepayIPG.URLEncodedFormParameterEncoder {
+  public static var urlEncodedForm: OnepayIPG.URLEncodedFormParameterEncoder {
+    get
+  }
+  public static func urlEncodedForm(encoder: OnepayIPG.URLEncodedFormEncoder = URLEncodedFormEncoder(), destination: OnepayIPG.URLEncodedFormParameterEncoder.Destination = .methodDependent) -> OnepayIPG.URLEncodedFormParameterEncoder
+}
+public protocol CachedResponseHandler {
+  func dataTask(_ task: Foundation.URLSessionDataTask, willCacheResponse response: Foundation.CachedURLResponse, completion: @escaping (Foundation.CachedURLResponse?) -> Swift.Void)
+}
+public struct ResponseCacher {
+  public enum Behavior {
+    case cache
+    case doNotCache
+    case modify((Foundation.URLSessionDataTask, Foundation.CachedURLResponse) -> Foundation.CachedURLResponse?)
+  }
+  public static let cache: OnepayIPG.ResponseCacher
+  public static let doNotCache: OnepayIPG.ResponseCacher
+  public let behavior: OnepayIPG.ResponseCacher.Behavior
+  public init(behavior: OnepayIPG.ResponseCacher.Behavior)
+}
+extension OnepayIPG.ResponseCacher : OnepayIPG.CachedResponseHandler {
+  public func dataTask(_ task: Foundation.URLSessionDataTask, willCacheResponse response: Foundation.CachedURLResponse, completion: @escaping (Foundation.CachedURLResponse?) -> Swift.Void)
+}
+extension OnepayIPG.CachedResponseHandler where Self == OnepayIPG.ResponseCacher {
+  public static var cache: OnepayIPG.ResponseCacher {
+    get
+  }
+  public static var doNotCache: OnepayIPG.ResponseCacher {
+    get
+  }
+  public static func modify(using closure: @escaping ((Foundation.URLSessionDataTask, Foundation.CachedURLResponse) -> Foundation.CachedURLResponse?)) -> OnepayIPG.ResponseCacher
+}
+public typealias AFDataResponse<Success> = OnepayIPG.DataResponse<Success, OnepayIPG.AFError>
+public typealias AFDownloadResponse<Success> = OnepayIPG.DownloadResponse<Success, OnepayIPG.AFError>
+public struct DataResponse<Success, Failure> where Failure : Swift.Error {
+  public let request: Foundation.URLRequest?
+  public let response: Foundation.HTTPURLResponse?
+  public let data: Foundation.Data?
+  public let metrics: Foundation.URLSessionTaskMetrics?
+  public let serializationDuration: Foundation.TimeInterval
+  public let result: Swift.Result<Success, Failure>
+  public var value: Success? {
+    get
+  }
+  public var error: Failure? {
+    get
+  }
+  public init(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, data: Foundation.Data?, metrics: Foundation.URLSessionTaskMetrics?, serializationDuration: Foundation.TimeInterval, result: Swift.Result<Success, Failure>)
+}
+extension OnepayIPG.DataResponse : Swift.CustomStringConvertible, Swift.CustomDebugStringConvertible {
+  public var description: Swift.String {
+    get
+  }
+  public var debugDescription: Swift.String {
+    get
+  }
+}
+extension OnepayIPG.DataResponse {
+  public func map<NewSuccess>(_ transform: (Success) -> NewSuccess) -> OnepayIPG.DataResponse<NewSuccess, Failure>
+  public func tryMap<NewSuccess>(_ transform: (Success) throws -> NewSuccess) -> OnepayIPG.DataResponse<NewSuccess, Swift.Error>
+  public func mapError<NewFailure>(_ transform: (Failure) -> NewFailure) -> OnepayIPG.DataResponse<Success, NewFailure> where NewFailure : Swift.Error
+  public func tryMapError<NewFailure>(_ transform: (Failure) throws -> NewFailure) -> OnepayIPG.DataResponse<Success, Swift.Error> where NewFailure : Swift.Error
+}
+public struct DownloadResponse<Success, Failure> where Failure : Swift.Error {
+  public let request: Foundation.URLRequest?
+  public let response: Foundation.HTTPURLResponse?
+  public let fileURL: Foundation.URL?
+  public let resumeData: Foundation.Data?
+  public let metrics: Foundation.URLSessionTaskMetrics?
+  public let serializationDuration: Foundation.TimeInterval
+  public let result: Swift.Result<Success, Failure>
+  public var value: Success? {
+    get
+  }
+  public var error: Failure? {
+    get
+  }
+  public init(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, fileURL: Foundation.URL?, resumeData: Foundation.Data?, metrics: Foundation.URLSessionTaskMetrics?, serializationDuration: Foundation.TimeInterval, result: Swift.Result<Success, Failure>)
+}
+extension OnepayIPG.DownloadResponse : Swift.CustomStringConvertible, Swift.CustomDebugStringConvertible {
+  public var description: Swift.String {
+    get
+  }
+  public var debugDescription: Swift.String {
+    get
+  }
+}
+extension OnepayIPG.DownloadResponse {
+  public func map<NewSuccess>(_ transform: (Success) -> NewSuccess) -> OnepayIPG.DownloadResponse<NewSuccess, Failure>
+  public func tryMap<NewSuccess>(_ transform: (Success) throws -> NewSuccess) -> OnepayIPG.DownloadResponse<NewSuccess, Swift.Error>
+  public func mapError<NewFailure>(_ transform: (Failure) -> NewFailure) -> OnepayIPG.DownloadResponse<Success, NewFailure> where NewFailure : Swift.Error
+  public func tryMapError<NewFailure>(_ transform: (Failure) throws -> NewFailure) -> OnepayIPG.DownloadResponse<Success, Swift.Error> where NewFailure : Swift.Error
+}
+extension OnepayIPG.Gateway : Foundation.URLSessionDelegate {
+  @objc dynamic public func urlSession(_ session: Foundation.URLSession, didReceive challenge: Foundation.URLAuthenticationChallenge, completionHandler: @escaping (Foundation.URLSession.AuthChallengeDisposition, Foundation.URLCredential?) -> Swift.Void)
+}
+public struct OnepayIPGInit {
+}
+public struct Customer {
+  public init(firstName: Swift.String, lastName: Swift.String, phone: Swift.String, email: Swift.String)
+}
+public struct Configurations {
+  public init(token: Swift.String, appID: Swift.String, hashKey: Swift.String)
+}
+public struct Product {
+  public init(amount: Swift.Float, currency: OnepayIPG.CurrencyTypes, reference: Swift.String, transactionOrder: [OnepayIPG.Product.TransactionOrder]? = nil)
+  public struct TransactionOrder : Swift.Encodable {
+    public init(itemName: Swift.String, itemCode: Swift.String, qty: Swift.Int, unitPrice: Swift.Float)
+    public func encode(to encoder: Swift.Encoder) throws
+  }
+}
+public enum CurrencyTypes : Swift.String {
+  case LKR
+  case USD
+  public init?(rawValue: Swift.String)
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+public class IPGInitBuilder {
+  public init()
+  public func setUser(_ user: OnepayIPG.Customer)
+  public func setConfigurations(_ secDetails: OnepayIPG.Configurations)
+  public func setProduct(_ productDetails: OnepayIPG.Product)
+  public func build() -> OnepayIPG.OnepayIPGInit
+  @objc deinit
+}
+extension Foundation.URLSessionConfiguration : OnepayIPG.AlamofireExtended {
+  public typealias ExtendedType = Foundation.URLSessionConfiguration
+}
+extension OnepayIPG.AlamofireExtension where ExtendedType : Foundation.URLSessionConfiguration {
+  public static var `default`: Foundation.URLSessionConfiguration {
+    get
+  }
+  public static var ephemeral: Foundation.URLSessionConfiguration {
+    get
+  }
+}
+public protocol RedirectHandler {
+  func task(_ task: Foundation.URLSessionTask, willBeRedirectedTo request: Foundation.URLRequest, for response: Foundation.HTTPURLResponse, completion: @escaping (Foundation.URLRequest?) -> Swift.Void)
+}
+public struct Redirector {
+  public enum Behavior {
+    case follow
+    case doNotFollow
+    case modify((Foundation.URLSessionTask, Foundation.URLRequest, Foundation.HTTPURLResponse) -> Foundation.URLRequest?)
+  }
+  public static let follow: OnepayIPG.Redirector
+  public static let doNotFollow: OnepayIPG.Redirector
+  public let behavior: OnepayIPG.Redirector.Behavior
+  public init(behavior: OnepayIPG.Redirector.Behavior)
+}
+extension OnepayIPG.Redirector : OnepayIPG.RedirectHandler {
+  public func task(_ task: Foundation.URLSessionTask, willBeRedirectedTo request: Foundation.URLRequest, for response: Foundation.HTTPURLResponse, completion: @escaping (Foundation.URLRequest?) -> Swift.Void)
+}
+extension OnepayIPG.RedirectHandler where Self == OnepayIPG.Redirector {
+  public static var follow: OnepayIPG.Redirector {
+    get
+  }
+  public static var doNotFollow: OnepayIPG.Redirector {
+    get
+  }
+  public static func modify(using closure: @escaping (Foundation.URLSessionTask, Foundation.URLRequest, Foundation.HTTPURLResponse) -> Foundation.URLRequest?) -> OnepayIPG.Redirector
+}
+extension OnepayIPG.Request {
+  public typealias ValidationResult = Swift.Result<Swift.Void, Swift.Error>
+}
+extension OnepayIPG.DataRequest {
+  public typealias Validation = (Foundation.URLRequest?, Foundation.HTTPURLResponse, Foundation.Data?) -> OnepayIPG.DataRequest.ValidationResult
+  @discardableResult
+  public func validate<S>(statusCode acceptableStatusCodes: S) -> Self where S : Swift.Sequence, S.Element == Swift.Int
+  @discardableResult
+  public func validate<S>(contentType acceptableContentTypes: @autoclosure @escaping () -> S) -> Self where S : Swift.Sequence, S.Element == Swift.String
+  @discardableResult
+  public func validate() -> Self
+}
+extension OnepayIPG.DataStreamRequest {
+  public typealias Validation = (_ request: Foundation.URLRequest?, _ response: Foundation.HTTPURLResponse) -> OnepayIPG.DataStreamRequest.ValidationResult
+  @discardableResult
+  final public func validate<S>(statusCode acceptableStatusCodes: S) -> Self where S : Swift.Sequence, S.Element == Swift.Int
+  @discardableResult
+  final public func validate<S>(contentType acceptableContentTypes: @autoclosure @escaping () -> S) -> Self where S : Swift.Sequence, S.Element == Swift.String
+  @discardableResult
+  final public func validate() -> Self
+}
+extension OnepayIPG.DownloadRequest {
+  public typealias Validation = (_ request: Foundation.URLRequest?, _ response: Foundation.HTTPURLResponse, _ fileURL: Foundation.URL?) -> OnepayIPG.DownloadRequest.ValidationResult
+  @discardableResult
+  public func validate<S>(statusCode acceptableStatusCodes: S) -> Self where S : Swift.Sequence, S.Element == Swift.Int
+  @discardableResult
+  public func validate<S>(contentType acceptableContentTypes: @autoclosure @escaping () -> S) -> Self where S : Swift.Sequence, S.Element == Swift.String
+  @discardableResult
+  public func validate() -> Self
+}
+open class ServerTrustManager {
+  final public let allHostsMustBeEvaluated: Swift.Bool
+  final public let evaluators: [Swift.String : OnepayIPG.ServerTrustEvaluating]
+  public init(allHostsMustBeEvaluated: Swift.Bool = true, evaluators: [Swift.String : OnepayIPG.ServerTrustEvaluating])
+  open func serverTrustEvaluator(forHost host: Swift.String) throws -> OnepayIPG.ServerTrustEvaluating?
+  @objc deinit
+}
+public protocol ServerTrustEvaluating {
+  func evaluate(_ trust: Security.SecTrust, forHost host: Swift.String) throws
+}
+final public class DefaultTrustEvaluator : OnepayIPG.ServerTrustEvaluating {
+  public init(validateHost: Swift.Bool = true)
+  final public func evaluate(_ trust: Security.SecTrust, forHost host: Swift.String) throws
+  @objc deinit
+}
+final public class RevocationTrustEvaluator : OnepayIPG.ServerTrustEvaluating {
+  public struct Options : Swift.OptionSet {
+    public static let crl: OnepayIPG.RevocationTrustEvaluator.Options
+    public static let networkAccessDisabled: OnepayIPG.RevocationTrustEvaluator.Options
+    public static let ocsp: OnepayIPG.RevocationTrustEvaluator.Options
+    public static let preferCRL: OnepayIPG.RevocationTrustEvaluator.Options
+    public static let requirePositiveResponse: OnepayIPG.RevocationTrustEvaluator.Options
+    public static let any: OnepayIPG.RevocationTrustEvaluator.Options
+    public let rawValue: CoreFoundation.CFOptionFlags
+    public init(rawValue: CoreFoundation.CFOptionFlags)
+    public typealias ArrayLiteralElement = OnepayIPG.RevocationTrustEvaluator.Options
+    public typealias Element = OnepayIPG.RevocationTrustEvaluator.Options
+    public typealias RawValue = CoreFoundation.CFOptionFlags
+  }
+  public init(performDefaultValidation: Swift.Bool = true, validateHost: Swift.Bool = true, options: OnepayIPG.RevocationTrustEvaluator.Options = .any)
+  final public func evaluate(_ trust: Security.SecTrust, forHost host: Swift.String) throws
+  @objc deinit
+}
+extension OnepayIPG.ServerTrustEvaluating where Self == OnepayIPG.RevocationTrustEvaluator {
+  public static var revocationChecking: OnepayIPG.RevocationTrustEvaluator {
+    get
+  }
+  public static func revocationChecking(performDefaultValidation: Swift.Bool = true, validateHost: Swift.Bool = true, options: OnepayIPG.RevocationTrustEvaluator.Options = .any) -> OnepayIPG.RevocationTrustEvaluator
+}
+final public class PinnedCertificatesTrustEvaluator : OnepayIPG.ServerTrustEvaluating {
+  public init(certificates: [Security.SecCertificate] = Bundle.main.af.certificates, acceptSelfSignedCertificates: Swift.Bool = false, performDefaultValidation: Swift.Bool = true, validateHost: Swift.Bool = true)
+  final public func evaluate(_ trust: Security.SecTrust, forHost host: Swift.String) throws
+  @objc deinit
+}
+extension OnepayIPG.ServerTrustEvaluating where Self == OnepayIPG.PinnedCertificatesTrustEvaluator {
+  public static var pinnedCertificates: OnepayIPG.PinnedCertificatesTrustEvaluator {
+    get
+  }
+  public static func pinnedCertificates(certificates: [Security.SecCertificate] = Bundle.main.af.certificates, acceptSelfSignedCertificates: Swift.Bool = false, performDefaultValidation: Swift.Bool = true, validateHost: Swift.Bool = true) -> OnepayIPG.PinnedCertificatesTrustEvaluator
+}
+final public class PublicKeysTrustEvaluator : OnepayIPG.ServerTrustEvaluating {
+  public init(keys: [Security.SecKey] = Bundle.main.af.publicKeys, performDefaultValidation: Swift.Bool = true, validateHost: Swift.Bool = true)
+  final public func evaluate(_ trust: Security.SecTrust, forHost host: Swift.String) throws
+  @objc deinit
+}
+extension OnepayIPG.ServerTrustEvaluating where Self == OnepayIPG.PublicKeysTrustEvaluator {
+  public static var publicKeys: OnepayIPG.PublicKeysTrustEvaluator {
+    get
+  }
+  public static func publicKeys(keys: [Security.SecKey] = Bundle.main.af.publicKeys, performDefaultValidation: Swift.Bool = true, validateHost: Swift.Bool = true) -> OnepayIPG.PublicKeysTrustEvaluator
+}
+final public class CompositeTrustEvaluator : OnepayIPG.ServerTrustEvaluating {
+  public init(evaluators: [OnepayIPG.ServerTrustEvaluating])
+  final public func evaluate(_ trust: Security.SecTrust, forHost host: Swift.String) throws
+  @objc deinit
+}
+extension OnepayIPG.ServerTrustEvaluating where Self == OnepayIPG.CompositeTrustEvaluator {
+  public static func composite(evaluators: [OnepayIPG.ServerTrustEvaluating]) -> OnepayIPG.CompositeTrustEvaluator
+}
+@available(*, deprecated, renamed: "DisabledTrustEvaluator", message: "DisabledEvaluator has been renamed DisabledTrustEvaluator.")
+public typealias DisabledEvaluator = OnepayIPG.DisabledTrustEvaluator
+final public class DisabledTrustEvaluator : OnepayIPG.ServerTrustEvaluating {
+  public init()
+  final public func evaluate(_ trust: Security.SecTrust, forHost host: Swift.String) throws
+  @objc deinit
+}
+extension Swift.Array where Element == OnepayIPG.ServerTrustEvaluating {
+  public func evaluate(_ trust: Security.SecTrust, forHost host: Swift.String) throws
+}
+extension Foundation.Bundle : OnepayIPG.AlamofireExtended {
+  public typealias ExtendedType = Foundation.Bundle
+}
+extension OnepayIPG.AlamofireExtension where ExtendedType : Foundation.Bundle {
+  public var certificates: [Security.SecCertificate] {
+    get
+  }
+  public var publicKeys: [Security.SecKey] {
+    get
+  }
+  public func paths(forResourcesOfTypes types: [Swift.String]) -> [Swift.String]
+}
+extension Security.SecTrust : OnepayIPG.AlamofireExtended {
+  public typealias ExtendedType = Security.SecTrust
+}
+extension OnepayIPG.AlamofireExtension where ExtendedType == Security.SecTrust {
+  @available(iOS 12, macOS 10.14, tvOS 12, watchOS 5, *)
+  public func evaluate(afterApplying policy: Security.SecPolicy) throws
+  @available(iOS, introduced: 10, deprecated: 12, renamed: "evaluate(afterApplying:)")
+  @available(macOS, introduced: 10.12, deprecated: 10.14, renamed: "evaluate(afterApplying:)")
+  @available(tvOS, introduced: 10, deprecated: 12, renamed: "evaluate(afterApplying:)")
+  @available(watchOS, introduced: 3, deprecated: 5, renamed: "evaluate(afterApplying:)")
+  public func validate(policy: Security.SecPolicy, errorProducer: (_ status: Darwin.OSStatus, _ result: Security.SecTrustResultType) -> Swift.Error) throws
+  public func apply(policy: Security.SecPolicy) throws -> Security.SecTrust
+  @available(iOS 12, macOS 10.14, tvOS 12, watchOS 5, *)
+  public func evaluate() throws
+  @available(iOS, introduced: 10, deprecated: 12, renamed: "evaluate()")
+  @available(macOS, introduced: 10.12, deprecated: 10.14, renamed: "evaluate()")
+  @available(tvOS, introduced: 10, deprecated: 12, renamed: "evaluate()")
+  @available(watchOS, introduced: 3, deprecated: 5, renamed: "evaluate()")
+  public func validate(errorProducer: (_ status: Darwin.OSStatus, _ result: Security.SecTrustResultType) -> Swift.Error) throws
+  public func setAnchorCertificates(_ certificates: [Security.SecCertificate]) throws
+  public var publicKeys: [Security.SecKey] {
+    get
+  }
+  public var certificates: [Security.SecCertificate] {
+    get
+  }
+  public var certificateData: [Foundation.Data] {
+    get
+  }
+  public func performDefaultValidation(forHost host: Swift.String) throws
+  public func performValidation(forHost host: Swift.String) throws
+}
+extension Security.SecPolicy : OnepayIPG.AlamofireExtended {
+  public typealias ExtendedType = Security.SecPolicy
+}
+extension OnepayIPG.AlamofireExtension where ExtendedType == Security.SecPolicy {
+  public static let `default`: Security.SecPolicy
+  public static func hostname(_ hostname: Swift.String) -> Security.SecPolicy
+  public static func revocation(options: OnepayIPG.RevocationTrustEvaluator.Options) throws -> Security.SecPolicy
+}
+extension Swift.Array : OnepayIPG.AlamofireExtended {
+  public typealias ExtendedType = Swift.Array<Element>
+}
+extension OnepayIPG.AlamofireExtension where ExtendedType == [Security.SecCertificate] {
+  public var data: [Foundation.Data] {
+    get
+  }
+  public var publicKeys: [Security.SecKey] {
+    get
+  }
+}
+extension Security.SecCertificate : OnepayIPG.AlamofireExtended {
+  public typealias ExtendedType = Security.SecCertificate
+}
+extension OnepayIPG.AlamofireExtension where ExtendedType == Security.SecCertificate {
+  public var publicKey: Security.SecKey? {
+    get
+  }
+}
+extension Swift.Int32 : OnepayIPG.AlamofireExtended {
+  public typealias ExtendedType = Swift.Int32
+}
+extension OnepayIPG.AlamofireExtension where ExtendedType == Darwin.OSStatus {
+  public var isSuccess: Swift.Bool {
+    get
+  }
+}
+extension Security.SecTrustResultType : OnepayIPG.AlamofireExtended {
+  public typealias ExtendedType = Security.SecTrustResultType
+}
+extension OnepayIPG.AlamofireExtension where ExtendedType == Security.SecTrustResultType {
+  public var isSuccess: Swift.Bool {
+    get
+  }
+}
+public struct HTTPHeaders {
+  public init()
+  public init(_ headers: [OnepayIPG.HTTPHeader])
+  public init(_ dictionary: [Swift.String : Swift.String])
+  public mutating func add(name: Swift.String, value: Swift.String)
+  public mutating func add(_ header: OnepayIPG.HTTPHeader)
+  public mutating func update(name: Swift.String, value: Swift.String)
+  public mutating func update(_ header: OnepayIPG.HTTPHeader)
+  public mutating func remove(name: Swift.String)
+  public mutating func sort()
+  public func sorted() -> OnepayIPG.HTTPHeaders
+  public func value(for name: Swift.String) -> Swift.String?
+  public subscript(name: Swift.String) -> Swift.String? {
+    get
+    set
+  }
+  public var dictionary: [Swift.String : Swift.String] {
+    get
+  }
+}
+extension OnepayIPG.HTTPHeaders : Swift.ExpressibleByDictionaryLiteral {
+  public init(dictionaryLiteral elements: (Swift.String, Swift.String)...)
+  public typealias Key = Swift.String
+  public typealias Value = Swift.String
+}
+extension OnepayIPG.HTTPHeaders : Swift.ExpressibleByArrayLiteral {
+  public init(arrayLiteral elements: OnepayIPG.HTTPHeader...)
+  public typealias ArrayLiteralElement = OnepayIPG.HTTPHeader
+}
+extension OnepayIPG.HTTPHeaders : Swift.Sequence {
+  public func makeIterator() -> Swift.IndexingIterator<[OnepayIPG.HTTPHeader]>
+}
+extension OnepayIPG.HTTPHeaders : Swift.Collection {
+  public var startIndex: Swift.Int {
+    get
+  }
+  public var endIndex: Swift.Int {
+    get
+  }
+  public subscript(position: Swift.Int) -> OnepayIPG.HTTPHeader {
+    get
+  }
+  public func index(after i: Swift.Int) -> Swift.Int
+  public typealias Element = OnepayIPG.HTTPHeader
+  public typealias Index = Swift.Int
+  public typealias Indices = Swift.DefaultIndices<OnepayIPG.HTTPHeaders>
+  public typealias Iterator = Swift.IndexingIterator<[OnepayIPG.HTTPHeader]>
+  public typealias SubSequence = Swift.Slice<OnepayIPG.HTTPHeaders>
+}
+extension OnepayIPG.HTTPHeaders : Swift.CustomStringConvertible {
+  public var description: Swift.String {
+    get
+  }
+}
+public struct HTTPHeader : Swift.Hashable {
+  public let name: Swift.String
+  public let value: Swift.String
+  public init(name: Swift.String, value: Swift.String)
+  public func hash(into hasher: inout Swift.Hasher)
+  public static func == (a: OnepayIPG.HTTPHeader, b: OnepayIPG.HTTPHeader) -> Swift.Bool
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension OnepayIPG.HTTPHeader : Swift.CustomStringConvertible {
+  public var description: Swift.String {
+    get
+  }
+}
+extension OnepayIPG.HTTPHeader {
+  public static func accept(_ value: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func acceptCharset(_ value: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func acceptLanguage(_ value: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func acceptEncoding(_ value: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func authorization(username: Swift.String, password: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func authorization(bearerToken: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func authorization(_ value: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func contentDisposition(_ value: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func contentType(_ value: Swift.String) -> OnepayIPG.HTTPHeader
+  public static func userAgent(_ value: Swift.String) -> OnepayIPG.HTTPHeader
+}
+extension OnepayIPG.HTTPHeaders {
+  public static let `default`: OnepayIPG.HTTPHeaders
+}
+extension OnepayIPG.HTTPHeader {
+  public static let defaultAcceptEncoding: OnepayIPG.HTTPHeader
+  public static let defaultAcceptLanguage: OnepayIPG.HTTPHeader
+  public static let defaultUserAgent: OnepayIPG.HTTPHeader
+}
+extension Foundation.URLRequest {
+  public var headers: OnepayIPG.HTTPHeaders {
+    get
+    set
+  }
+}
+extension Foundation.HTTPURLResponse {
+  public var headers: OnepayIPG.HTTPHeaders {
+    get
+  }
+}
+extension Foundation.URLSessionConfiguration {
+  public var headers: OnepayIPG.HTTPHeaders {
+    get
+    set
+  }
+}
+public struct OnepayIPGSuccess {
+  public let status: Swift.Int
+  public let description: Swift.String
+  public let firstName: Swift.String
+  public let lastName: Swift.String
+  public let phone: Swift.String
+  public let reference: Swift.String
+  public let email: Swift.String
+  public let amount: Swift.Float
+  public let currency: Swift.String
+}
+public struct OnepayIPGError {
+  public let responseCode: Swift.Int?
+  public let description: Swift.String?
+}
+public struct HTTPMethod : Swift.RawRepresentable, Swift.Equatable, Swift.Hashable {
+  public static let connect: OnepayIPG.HTTPMethod
+  public static let delete: OnepayIPG.HTTPMethod
+  public static let get: OnepayIPG.HTTPMethod
+  public static let head: OnepayIPG.HTTPMethod
+  public static let options: OnepayIPG.HTTPMethod
+  public static let patch: OnepayIPG.HTTPMethod
+  public static let post: OnepayIPG.HTTPMethod
+  public static let put: OnepayIPG.HTTPMethod
+  public static let query: OnepayIPG.HTTPMethod
+  public static let trace: OnepayIPG.HTTPMethod
+  public let rawValue: Swift.String
+  public init(rawValue: Swift.String)
+  public typealias RawValue = Swift.String
+}
+public protocol EventMonitor {
+  var queue: Dispatch.DispatchQueue { get }
+  func urlSession(_ session: Foundation.URLSession, didBecomeInvalidWithError error: Swift.Error?)
+  func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didReceive challenge: Foundation.URLAuthenticationChallenge)
+  func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didSendBodyData bytesSent: Swift.Int64, totalBytesSent: Swift.Int64, totalBytesExpectedToSend: Swift.Int64)
+  func urlSession(_ session: Foundation.URLSession, taskNeedsNewBodyStream task: Foundation.URLSessionTask)
+  func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, willPerformHTTPRedirection response: Foundation.HTTPURLResponse, newRequest request: Foundation.URLRequest)
+  func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didFinishCollecting metrics: Foundation.URLSessionTaskMetrics)
+  func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didCompleteWithError error: Swift.Error?)
+  @available(macOS 10.13, iOS 11.0, tvOS 11.0, watchOS 4.0, *)
+  func urlSession(_ session: Foundation.URLSession, taskIsWaitingForConnectivity task: Foundation.URLSessionTask)
+  func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, didReceive data: Foundation.Data)
+  func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, willCacheResponse proposedResponse: Foundation.CachedURLResponse)
+  func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didResumeAtOffset fileOffset: Swift.Int64, expectedTotalBytes: Swift.Int64)
+  func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didWriteData bytesWritten: Swift.Int64, totalBytesWritten: Swift.Int64, totalBytesExpectedToWrite: Swift.Int64)
+  func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didFinishDownloadingTo location: Foundation.URL)
+  func request(_ request: OnepayIPG.Request, didCreateInitialURLRequest urlRequest: Foundation.URLRequest)
+  func request(_ request: OnepayIPG.Request, didFailToCreateURLRequestWithError error: OnepayIPG.AFError)
+  func request(_ request: OnepayIPG.Request, didAdaptInitialRequest initialRequest: Foundation.URLRequest, to adaptedRequest: Foundation.URLRequest)
+  func request(_ request: OnepayIPG.Request, didFailToAdaptURLRequest initialRequest: Foundation.URLRequest, withError error: OnepayIPG.AFError)
+  func request(_ request: OnepayIPG.Request, didCreateURLRequest urlRequest: Foundation.URLRequest)
+  func request(_ request: OnepayIPG.Request, didCreateTask task: Foundation.URLSessionTask)
+  func request(_ request: OnepayIPG.Request, didGatherMetrics metrics: Foundation.URLSessionTaskMetrics)
+  func request(_ request: OnepayIPG.Request, didFailTask task: Foundation.URLSessionTask, earlyWithError error: OnepayIPG.AFError)
+  func request(_ request: OnepayIPG.Request, didCompleteTask task: Foundation.URLSessionTask, with error: OnepayIPG.AFError?)
+  func requestIsRetrying(_ request: OnepayIPG.Request)
+  func requestDidFinish(_ request: OnepayIPG.Request)
+  func requestDidResume(_ request: OnepayIPG.Request)
+  func request(_ request: OnepayIPG.Request, didResumeTask task: Foundation.URLSessionTask)
+  func requestDidSuspend(_ request: OnepayIPG.Request)
+  func request(_ request: OnepayIPG.Request, didSuspendTask task: Foundation.URLSessionTask)
+  func requestDidCancel(_ request: OnepayIPG.Request)
+  func request(_ request: OnepayIPG.Request, didCancelTask task: Foundation.URLSessionTask)
+  func request(_ request: OnepayIPG.DataRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, data: Foundation.Data?, withResult result: OnepayIPG.Request.ValidationResult)
+  func request(_ request: OnepayIPG.DataRequest, didParseResponse response: OnepayIPG.DataResponse<Foundation.Data?, OnepayIPG.AFError>)
+  func request<Value>(_ request: OnepayIPG.DataRequest, didParseResponse response: OnepayIPG.DataResponse<Value, OnepayIPG.AFError>)
+  func request(_ request: OnepayIPG.DataStreamRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, withResult result: OnepayIPG.Request.ValidationResult)
+  func request<Value>(_ request: OnepayIPG.DataStreamRequest, didParseStream result: Swift.Result<Value, OnepayIPG.AFError>)
+  func request(_ request: OnepayIPG.UploadRequest, didCreateUploadable uploadable: OnepayIPG.UploadRequest.Uploadable)
+  func request(_ request: OnepayIPG.UploadRequest, didFailToCreateUploadableWithError error: OnepayIPG.AFError)
+  func request(_ request: OnepayIPG.UploadRequest, didProvideInputStream stream: Foundation.InputStream)
+  func request(_ request: OnepayIPG.DownloadRequest, didFinishDownloadingUsing task: Foundation.URLSessionTask, with result: Swift.Result<Foundation.URL, OnepayIPG.AFError>)
+  func request(_ request: OnepayIPG.DownloadRequest, didCreateDestinationURL url: Foundation.URL)
+  func request(_ request: OnepayIPG.DownloadRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, fileURL: Foundation.URL?, withResult result: OnepayIPG.Request.ValidationResult)
+  func request(_ request: OnepayIPG.DownloadRequest, didParseResponse response: OnepayIPG.DownloadResponse<Foundation.URL?, OnepayIPG.AFError>)
+  func request<Value>(_ request: OnepayIPG.DownloadRequest, didParseResponse response: OnepayIPG.DownloadResponse<Value, OnepayIPG.AFError>)
+}
+extension OnepayIPG.EventMonitor {
+  public var queue: Dispatch.DispatchQueue {
+    get
+  }
+  public func urlSession(_ session: Foundation.URLSession, didBecomeInvalidWithError error: Swift.Error?)
+  public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didReceive challenge: Foundation.URLAuthenticationChallenge)
+  public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didSendBodyData bytesSent: Swift.Int64, totalBytesSent: Swift.Int64, totalBytesExpectedToSend: Swift.Int64)
+  public func urlSession(_ session: Foundation.URLSession, taskNeedsNewBodyStream task: Foundation.URLSessionTask)
+  public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, willPerformHTTPRedirection response: Foundation.HTTPURLResponse, newRequest request: Foundation.URLRequest)
+  public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didFinishCollecting metrics: Foundation.URLSessionTaskMetrics)
+  public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didCompleteWithError error: Swift.Error?)
+  public func urlSession(_ session: Foundation.URLSession, taskIsWaitingForConnectivity task: Foundation.URLSessionTask)
+  public func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, didReceive data: Foundation.Data)
+  public func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, willCacheResponse proposedResponse: Foundation.CachedURLResponse)
+  public func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didResumeAtOffset fileOffset: Swift.Int64, expectedTotalBytes: Swift.Int64)
+  public func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didWriteData bytesWritten: Swift.Int64, totalBytesWritten: Swift.Int64, totalBytesExpectedToWrite: Swift.Int64)
+  public func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didFinishDownloadingTo location: Foundation.URL)
+  public func request(_ request: OnepayIPG.Request, didCreateInitialURLRequest urlRequest: Foundation.URLRequest)
+  public func request(_ request: OnepayIPG.Request, didFailToCreateURLRequestWithError error: OnepayIPG.AFError)
+  public func request(_ request: OnepayIPG.Request, didAdaptInitialRequest initialRequest: Foundation.URLRequest, to adaptedRequest: Foundation.URLRequest)
+  public func request(_ request: OnepayIPG.Request, didFailToAdaptURLRequest initialRequest: Foundation.URLRequest, withError error: OnepayIPG.AFError)
+  public func request(_ request: OnepayIPG.Request, didCreateURLRequest urlRequest: Foundation.URLRequest)
+  public func request(_ request: OnepayIPG.Request, didCreateTask task: Foundation.URLSessionTask)
+  public func request(_ request: OnepayIPG.Request, didGatherMetrics metrics: Foundation.URLSessionTaskMetrics)
+  public func request(_ request: OnepayIPG.Request, didFailTask task: Foundation.URLSessionTask, earlyWithError error: OnepayIPG.AFError)
+  public func request(_ request: OnepayIPG.Request, didCompleteTask task: Foundation.URLSessionTask, with error: OnepayIPG.AFError?)
+  public func requestIsRetrying(_ request: OnepayIPG.Request)
+  public func requestDidFinish(_ request: OnepayIPG.Request)
+  public func requestDidResume(_ request: OnepayIPG.Request)
+  public func request(_ request: OnepayIPG.Request, didResumeTask task: Foundation.URLSessionTask)
+  public func requestDidSuspend(_ request: OnepayIPG.Request)
+  public func request(_ request: OnepayIPG.Request, didSuspendTask task: Foundation.URLSessionTask)
+  public func requestDidCancel(_ request: OnepayIPG.Request)
+  public func request(_ request: OnepayIPG.Request, didCancelTask task: Foundation.URLSessionTask)
+  public func request(_ request: OnepayIPG.DataRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, data: Foundation.Data?, withResult result: OnepayIPG.Request.ValidationResult)
+  public func request(_ request: OnepayIPG.DataRequest, didParseResponse response: OnepayIPG.DataResponse<Foundation.Data?, OnepayIPG.AFError>)
+  public func request<Value>(_ request: OnepayIPG.DataRequest, didParseResponse response: OnepayIPG.DataResponse<Value, OnepayIPG.AFError>)
+  public func request(_ request: OnepayIPG.DataStreamRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, withResult result: OnepayIPG.Request.ValidationResult)
+  public func request<Value>(_ request: OnepayIPG.DataStreamRequest, didParseStream result: Swift.Result<Value, OnepayIPG.AFError>)
+  public func request(_ request: OnepayIPG.UploadRequest, didCreateUploadable uploadable: OnepayIPG.UploadRequest.Uploadable)
+  public func request(_ request: OnepayIPG.UploadRequest, didFailToCreateUploadableWithError error: OnepayIPG.AFError)
+  public func request(_ request: OnepayIPG.UploadRequest, didProvideInputStream stream: Foundation.InputStream)
+  public func request(_ request: OnepayIPG.DownloadRequest, didFinishDownloadingUsing task: Foundation.URLSessionTask, with result: Swift.Result<Foundation.URL, OnepayIPG.AFError>)
+  public func request(_ request: OnepayIPG.DownloadRequest, didCreateDestinationURL url: Foundation.URL)
+  public func request(_ request: OnepayIPG.DownloadRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, fileURL: Foundation.URL?, withResult result: OnepayIPG.Request.ValidationResult)
+  public func request(_ request: OnepayIPG.DownloadRequest, didParseResponse response: OnepayIPG.DownloadResponse<Foundation.URL?, OnepayIPG.AFError>)
+  public func request<Value>(_ request: OnepayIPG.DownloadRequest, didParseResponse response: OnepayIPG.DownloadResponse<Value, OnepayIPG.AFError>)
+}
+@_hasMissingDesignatedInitializers final public class CompositeEventMonitor : OnepayIPG.EventMonitor {
+  final public let queue: Dispatch.DispatchQueue
+  final public func urlSession(_ session: Foundation.URLSession, didBecomeInvalidWithError error: Swift.Error?)
+  final public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didReceive challenge: Foundation.URLAuthenticationChallenge)
+  final public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didSendBodyData bytesSent: Swift.Int64, totalBytesSent: Swift.Int64, totalBytesExpectedToSend: Swift.Int64)
+  final public func urlSession(_ session: Foundation.URLSession, taskNeedsNewBodyStream task: Foundation.URLSessionTask)
+  final public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, willPerformHTTPRedirection response: Foundation.HTTPURLResponse, newRequest request: Foundation.URLRequest)
+  final public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didFinishCollecting metrics: Foundation.URLSessionTaskMetrics)
+  final public func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didCompleteWithError error: Swift.Error?)
+  @available(macOS 10.13, iOS 11.0, tvOS 11.0, watchOS 4.0, *)
+  final public func urlSession(_ session: Foundation.URLSession, taskIsWaitingForConnectivity task: Foundation.URLSessionTask)
+  final public func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, didReceive data: Foundation.Data)
+  final public func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, willCacheResponse proposedResponse: Foundation.CachedURLResponse)
+  final public func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didResumeAtOffset fileOffset: Swift.Int64, expectedTotalBytes: Swift.Int64)
+  final public func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didWriteData bytesWritten: Swift.Int64, totalBytesWritten: Swift.Int64, totalBytesExpectedToWrite: Swift.Int64)
+  final public func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didFinishDownloadingTo location: Foundation.URL)
+  final public func request(_ request: OnepayIPG.Request, didCreateInitialURLRequest urlRequest: Foundation.URLRequest)
+  final public func request(_ request: OnepayIPG.Request, didFailToCreateURLRequestWithError error: OnepayIPG.AFError)
+  final public func request(_ request: OnepayIPG.Request, didAdaptInitialRequest initialRequest: Foundation.URLRequest, to adaptedRequest: Foundation.URLRequest)
+  final public func request(_ request: OnepayIPG.Request, didFailToAdaptURLRequest initialRequest: Foundation.URLRequest, withError error: OnepayIPG.AFError)
+  final public func request(_ request: OnepayIPG.Request, didCreateURLRequest urlRequest: Foundation.URLRequest)
+  final public func request(_ request: OnepayIPG.Request, didCreateTask task: Foundation.URLSessionTask)
+  final public func request(_ request: OnepayIPG.Request, didGatherMetrics metrics: Foundation.URLSessionTaskMetrics)
+  final public func request(_ request: OnepayIPG.Request, didFailTask task: Foundation.URLSessionTask, earlyWithError error: OnepayIPG.AFError)
+  final public func request(_ request: OnepayIPG.Request, didCompleteTask task: Foundation.URLSessionTask, with error: OnepayIPG.AFError?)
+  final public func requestIsRetrying(_ request: OnepayIPG.Request)
+  final public func requestDidFinish(_ request: OnepayIPG.Request)
+  final public func requestDidResume(_ request: OnepayIPG.Request)
+  final public func request(_ request: OnepayIPG.Request, didResumeTask task: Foundation.URLSessionTask)
+  final public func requestDidSuspend(_ request: OnepayIPG.Request)
+  final public func request(_ request: OnepayIPG.Request, didSuspendTask task: Foundation.URLSessionTask)
+  final public func requestDidCancel(_ request: OnepayIPG.Request)
+  final public func request(_ request: OnepayIPG.Request, didCancelTask task: Foundation.URLSessionTask)
+  final public func request(_ request: OnepayIPG.DataRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, data: Foundation.Data?, withResult result: OnepayIPG.Request.ValidationResult)
+  final public func request(_ request: OnepayIPG.DataRequest, didParseResponse response: OnepayIPG.DataResponse<Foundation.Data?, OnepayIPG.AFError>)
+  final public func request<Value>(_ request: OnepayIPG.DataRequest, didParseResponse response: OnepayIPG.DataResponse<Value, OnepayIPG.AFError>)
+  final public func request(_ request: OnepayIPG.DataStreamRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, withResult result: OnepayIPG.Request.ValidationResult)
+  final public func request<Value>(_ request: OnepayIPG.DataStreamRequest, didParseStream result: Swift.Result<Value, OnepayIPG.AFError>)
+  final public func request(_ request: OnepayIPG.UploadRequest, didCreateUploadable uploadable: OnepayIPG.UploadRequest.Uploadable)
+  final public func request(_ request: OnepayIPG.UploadRequest, didFailToCreateUploadableWithError error: OnepayIPG.AFError)
+  final public func request(_ request: OnepayIPG.UploadRequest, didProvideInputStream stream: Foundation.InputStream)
+  final public func request(_ request: OnepayIPG.DownloadRequest, didFinishDownloadingUsing task: Foundation.URLSessionTask, with result: Swift.Result<Foundation.URL, OnepayIPG.AFError>)
+  final public func request(_ request: OnepayIPG.DownloadRequest, didCreateDestinationURL url: Foundation.URL)
+  final public func request(_ request: OnepayIPG.DownloadRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, fileURL: Foundation.URL?, withResult result: OnepayIPG.Request.ValidationResult)
+  final public func request(_ request: OnepayIPG.DownloadRequest, didParseResponse response: OnepayIPG.DownloadResponse<Foundation.URL?, OnepayIPG.AFError>)
+  final public func request<Value>(_ request: OnepayIPG.DownloadRequest, didParseResponse response: OnepayIPG.DownloadResponse<Value, OnepayIPG.AFError>)
+  @objc deinit
+}
+open class ClosureEventMonitor : OnepayIPG.EventMonitor {
+  open var sessionDidBecomeInvalidWithError: ((Foundation.URLSession, Swift.Error?) -> Swift.Void)?
+  open var taskDidReceiveChallenge: ((Foundation.URLSession, Foundation.URLSessionTask, Foundation.URLAuthenticationChallenge) -> Swift.Void)?
+  open var taskDidSendBodyData: ((Foundation.URLSession, Foundation.URLSessionTask, Swift.Int64, Swift.Int64, Swift.Int64) -> Swift.Void)?
+  open var taskNeedNewBodyStream: ((Foundation.URLSession, Foundation.URLSessionTask) -> Swift.Void)?
+  open var taskWillPerformHTTPRedirection: ((Foundation.URLSession, Foundation.URLSessionTask, Foundation.HTTPURLResponse, Foundation.URLRequest) -> Swift.Void)?
+  open var taskDidFinishCollectingMetrics: ((Foundation.URLSession, Foundation.URLSessionTask, Foundation.URLSessionTaskMetrics) -> Swift.Void)?
+  open var taskDidComplete: ((Foundation.URLSession, Foundation.URLSessionTask, Swift.Error?) -> Swift.Void)?
+  open var taskIsWaitingForConnectivity: ((Foundation.URLSession, Foundation.URLSessionTask) -> Swift.Void)?
+  open var dataTaskDidReceiveData: ((Foundation.URLSession, Foundation.URLSessionDataTask, Foundation.Data) -> Swift.Void)?
+  open var dataTaskWillCacheResponse: ((Foundation.URLSession, Foundation.URLSessionDataTask, Foundation.CachedURLResponse) -> Swift.Void)?
+  open var downloadTaskDidFinishDownloadingToURL: ((Foundation.URLSession, Foundation.URLSessionDownloadTask, Foundation.URL) -> Swift.Void)?
+  open var downloadTaskDidWriteData: ((Foundation.URLSession, Foundation.URLSessionDownloadTask, Swift.Int64, Swift.Int64, Swift.Int64) -> Swift.Void)?
+  open var downloadTaskDidResumeAtOffset: ((Foundation.URLSession, Foundation.URLSessionDownloadTask, Swift.Int64, Swift.Int64) -> Swift.Void)?
+  open var requestDidCreateInitialURLRequest: ((OnepayIPG.Request, Foundation.URLRequest) -> Swift.Void)?
+  open var requestDidFailToCreateURLRequestWithError: ((OnepayIPG.Request, OnepayIPG.AFError) -> Swift.Void)?
+  open var requestDidAdaptInitialRequestToAdaptedRequest: ((OnepayIPG.Request, Foundation.URLRequest, Foundation.URLRequest) -> Swift.Void)?
+  open var requestDidFailToAdaptURLRequestWithError: ((OnepayIPG.Request, Foundation.URLRequest, OnepayIPG.AFError) -> Swift.Void)?
+  open var requestDidCreateURLRequest: ((OnepayIPG.Request, Foundation.URLRequest) -> Swift.Void)?
+  open var requestDidCreateTask: ((OnepayIPG.Request, Foundation.URLSessionTask) -> Swift.Void)?
+  open var requestDidGatherMetrics: ((OnepayIPG.Request, Foundation.URLSessionTaskMetrics) -> Swift.Void)?
+  open var requestDidFailTaskEarlyWithError: ((OnepayIPG.Request, Foundation.URLSessionTask, OnepayIPG.AFError) -> Swift.Void)?
+  open var requestDidCompleteTaskWithError: ((OnepayIPG.Request, Foundation.URLSessionTask, OnepayIPG.AFError?) -> Swift.Void)?
+  open var requestIsRetrying: ((OnepayIPG.Request) -> Swift.Void)?
+  open var requestDidFinish: ((OnepayIPG.Request) -> Swift.Void)?
+  open var requestDidResume: ((OnepayIPG.Request) -> Swift.Void)?
+  open var requestDidResumeTask: ((OnepayIPG.Request, Foundation.URLSessionTask) -> Swift.Void)?
+  open var requestDidSuspend: ((OnepayIPG.Request) -> Swift.Void)?
+  open var requestDidSuspendTask: ((OnepayIPG.Request, Foundation.URLSessionTask) -> Swift.Void)?
+  open var requestDidCancel: ((OnepayIPG.Request) -> Swift.Void)?
+  open var requestDidCancelTask: ((OnepayIPG.Request, Foundation.URLSessionTask) -> Swift.Void)?
+  open var requestDidValidateRequestResponseDataWithResult: ((OnepayIPG.DataRequest, Foundation.URLRequest?, Foundation.HTTPURLResponse, Foundation.Data?, OnepayIPG.Request.ValidationResult) -> Swift.Void)?
+  open var requestDidParseResponse: ((OnepayIPG.DataRequest, OnepayIPG.DataResponse<Foundation.Data?, OnepayIPG.AFError>) -> Swift.Void)?
+  open var requestDidValidateRequestResponseWithResult: ((OnepayIPG.DataStreamRequest, Foundation.URLRequest?, Foundation.HTTPURLResponse, OnepayIPG.Request.ValidationResult) -> Swift.Void)?
+  open var requestDidCreateUploadable: ((OnepayIPG.UploadRequest, OnepayIPG.UploadRequest.Uploadable) -> Swift.Void)?
+  open var requestDidFailToCreateUploadableWithError: ((OnepayIPG.UploadRequest, OnepayIPG.AFError) -> Swift.Void)?
+  open var requestDidProvideInputStream: ((OnepayIPG.UploadRequest, Foundation.InputStream) -> Swift.Void)?
+  open var requestDidFinishDownloadingUsingTaskWithResult: ((OnepayIPG.DownloadRequest, Foundation.URLSessionTask, Swift.Result<Foundation.URL, OnepayIPG.AFError>) -> Swift.Void)?
+  open var requestDidCreateDestinationURL: ((OnepayIPG.DownloadRequest, Foundation.URL) -> Swift.Void)?
+  open var requestDidValidateRequestResponseFileURLWithResult: ((OnepayIPG.DownloadRequest, Foundation.URLRequest?, Foundation.HTTPURLResponse, Foundation.URL?, OnepayIPG.Request.ValidationResult) -> Swift.Void)?
+  open var requestDidParseDownloadResponse: ((OnepayIPG.DownloadRequest, OnepayIPG.DownloadResponse<Foundation.URL?, OnepayIPG.AFError>) -> Swift.Void)?
+  final public let queue: Dispatch.DispatchQueue
+  public init(queue: Dispatch.DispatchQueue = .main)
+  open func urlSession(_ session: Foundation.URLSession, didBecomeInvalidWithError error: Swift.Error?)
+  open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didReceive challenge: Foundation.URLAuthenticationChallenge)
+  open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didSendBodyData bytesSent: Swift.Int64, totalBytesSent: Swift.Int64, totalBytesExpectedToSend: Swift.Int64)
+  open func urlSession(_ session: Foundation.URLSession, taskNeedsNewBodyStream task: Foundation.URLSessionTask)
+  open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, willPerformHTTPRedirection response: Foundation.HTTPURLResponse, newRequest request: Foundation.URLRequest)
+  open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didFinishCollecting metrics: Foundation.URLSessionTaskMetrics)
+  open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didCompleteWithError error: Swift.Error?)
+  open func urlSession(_ session: Foundation.URLSession, taskIsWaitingForConnectivity task: Foundation.URLSessionTask)
+  open func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, didReceive data: Foundation.Data)
+  open func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, willCacheResponse proposedResponse: Foundation.CachedURLResponse)
+  open func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didResumeAtOffset fileOffset: Swift.Int64, expectedTotalBytes: Swift.Int64)
+  open func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didWriteData bytesWritten: Swift.Int64, totalBytesWritten: Swift.Int64, totalBytesExpectedToWrite: Swift.Int64)
+  open func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didFinishDownloadingTo location: Foundation.URL)
+  open func request(_ request: OnepayIPG.Request, didCreateInitialURLRequest urlRequest: Foundation.URLRequest)
+  open func request(_ request: OnepayIPG.Request, didFailToCreateURLRequestWithError error: OnepayIPG.AFError)
+  open func request(_ request: OnepayIPG.Request, didAdaptInitialRequest initialRequest: Foundation.URLRequest, to adaptedRequest: Foundation.URLRequest)
+  open func request(_ request: OnepayIPG.Request, didFailToAdaptURLRequest initialRequest: Foundation.URLRequest, withError error: OnepayIPG.AFError)
+  open func request(_ request: OnepayIPG.Request, didCreateURLRequest urlRequest: Foundation.URLRequest)
+  open func request(_ request: OnepayIPG.Request, didCreateTask task: Foundation.URLSessionTask)
+  open func request(_ request: OnepayIPG.Request, didGatherMetrics metrics: Foundation.URLSessionTaskMetrics)
+  open func request(_ request: OnepayIPG.Request, didFailTask task: Foundation.URLSessionTask, earlyWithError error: OnepayIPG.AFError)
+  open func request(_ request: OnepayIPG.Request, didCompleteTask task: Foundation.URLSessionTask, with error: OnepayIPG.AFError?)
+  open func requestIsRetrying(_ request: OnepayIPG.Request)
+  open func requestDidFinish(_ request: OnepayIPG.Request)
+  open func requestDidResume(_ request: OnepayIPG.Request)
+  public func request(_ request: OnepayIPG.Request, didResumeTask task: Foundation.URLSessionTask)
+  open func requestDidSuspend(_ request: OnepayIPG.Request)
+  public func request(_ request: OnepayIPG.Request, didSuspendTask task: Foundation.URLSessionTask)
+  open func requestDidCancel(_ request: OnepayIPG.Request)
+  public func request(_ request: OnepayIPG.Request, didCancelTask task: Foundation.URLSessionTask)
+  open func request(_ request: OnepayIPG.DataRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, data: Foundation.Data?, withResult result: OnepayIPG.Request.ValidationResult)
+  open func request(_ request: OnepayIPG.DataRequest, didParseResponse response: OnepayIPG.DataResponse<Foundation.Data?, OnepayIPG.AFError>)
+  public func request(_ request: OnepayIPG.DataStreamRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, withResult result: OnepayIPG.Request.ValidationResult)
+  open func request(_ request: OnepayIPG.UploadRequest, didCreateUploadable uploadable: OnepayIPG.UploadRequest.Uploadable)
+  open func request(_ request: OnepayIPG.UploadRequest, didFailToCreateUploadableWithError error: OnepayIPG.AFError)
+  open func request(_ request: OnepayIPG.UploadRequest, didProvideInputStream stream: Foundation.InputStream)
+  open func request(_ request: OnepayIPG.DownloadRequest, didFinishDownloadingUsing task: Foundation.URLSessionTask, with result: Swift.Result<Foundation.URL, OnepayIPG.AFError>)
+  open func request(_ request: OnepayIPG.DownloadRequest, didCreateDestinationURL url: Foundation.URL)
+  open func request(_ request: OnepayIPG.DownloadRequest, didValidateRequest urlRequest: Foundation.URLRequest?, response: Foundation.HTTPURLResponse, fileURL: Foundation.URL?, withResult result: OnepayIPG.Request.ValidationResult)
+  open func request(_ request: OnepayIPG.DownloadRequest, didParseResponse response: OnepayIPG.DownloadResponse<Foundation.URL?, OnepayIPG.AFError>)
+  @objc deinit
+}
+public protocol JSONEncoderProtocol {
+  func encode<T>(_ value: T) throws -> Foundation.Data where T : Swift.Encodable
+}
+extension Foundation.JSONEncoder : OnepayIPG.JSONEncoderProtocol {
+}
+public protocol JSONDecoderProtocol {
+  func decode<T>(_ type: T.Type, from data: Foundation.Data) throws -> T where T : Swift.Decodable
+}
+extension Foundation.JSONDecoder : OnepayIPG.JSONDecoderProtocol {
+}
+public struct GatewayRegion : Swift.Equatable {
+  public let id: Swift.String
+  public let name: Swift.String
+  public let baseURL: Swift.String
+  public static func == (a: OnepayIPG.GatewayRegion, b: OnepayIPG.GatewayRegion) -> Swift.Bool
+}
+extension OnepayIPG.GatewayRegion {
+  public static let asiaPacific: OnepayIPG.GatewayRegion
+  public static let europe: OnepayIPG.GatewayRegion
+  public static let northAmerica: OnepayIPG.GatewayRegion
+  public static let mtf: OnepayIPG.GatewayRegion
+  public static let india: OnepayIPG.GatewayRegion
+  public static let china: OnepayIPG.GatewayRegion
+  public static func other(id: Swift.String, name: Swift.String, baseURL: Swift.String) -> OnepayIPG.GatewayRegion
+}
+public struct AlamofireExtension<ExtendedType> {
+  public var type: ExtendedType {
+    get
+  }
+  public init(_ type: ExtendedType)
+}
+public protocol AlamofireExtended {
+  associatedtype ExtendedType
+  static var af: OnepayIPG.AlamofireExtension<Self.ExtendedType>.Type { get set }
+  var af: OnepayIPG.AlamofireExtension<Self.ExtendedType> { get set }
+}
+extension OnepayIPG.AlamofireExtended {
+  public static var af: OnepayIPG.AlamofireExtension<Self>.Type {
+    get
+    set
+  }
+  public var af: OnepayIPG.AlamofireExtension<Self> {
+    get
+    set
+  }
+}
+open class MultipartFormData {
+  public static let encodingMemoryThreshold: Swift.UInt64
+  open var contentType: Swift.String {
+    get
+    set
+  }
+  public var contentLength: Swift.UInt64 {
+    get
+  }
+  final public let boundary: Swift.String
+  public init(fileManager: Foundation.FileManager = .default, boundary: Swift.String? = nil)
+  public func append(_ data: Foundation.Data, withName name: Swift.String, fileName: Swift.String? = nil, mimeType: Swift.String? = nil)
+  public func append(_ fileURL: Foundation.URL, withName name: Swift.String)
+  public func append(_ fileURL: Foundation.URL, withName name: Swift.String, fileName: Swift.String, mimeType: Swift.String)
+  public func append(_ stream: Foundation.InputStream, withLength length: Swift.UInt64, name: Swift.String, fileName: Swift.String, mimeType: Swift.String)
+  public func append(_ stream: Foundation.InputStream, withLength length: Swift.UInt64, headers: OnepayIPG.HTTPHeaders)
+  public func encode() throws -> Foundation.Data
+  public func writeEncodedData(to fileURL: Foundation.URL) throws
+  @objc deinit
+}
+@objc public class Gateway : ObjectiveC.NSObject {
+  final public let region: OnepayIPG.GatewayRegion
+  final public let merchantId: Swift.String
+  public init(region: OnepayIPG.GatewayRegion, merchantId: Swift.String)
+  @discardableResult
+  public func updateSession(_ session: Swift.String, apiVersion: Swift.String, payload: OnepayIPG.GatewayMap, completion: @escaping (OnepayIPG.GatewayResult<OnepayIPG.GatewayMap>) -> Swift.Void) -> Foundation.URLSessionTask?
+  @objc deinit
+}
+public let AF: OnepayIPG.Session
+public protocol DataResponseSerializerProtocol {
+  associatedtype SerializedObject
+  func serialize(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, data: Foundation.Data?, error: Swift.Error?) throws -> Self.SerializedObject
+}
+public protocol DownloadResponseSerializerProtocol {
+  associatedtype SerializedObject
+  func serializeDownload(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, fileURL: Foundation.URL?, error: Swift.Error?) throws -> Self.SerializedObject
+}
+public protocol ResponseSerializer : OnepayIPG.DataResponseSerializerProtocol, OnepayIPG.DownloadResponseSerializerProtocol {
+  var dataPreprocessor: OnepayIPG.DataPreprocessor { get }
+  var emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> { get }
+  var emptyResponseCodes: Swift.Set<Swift.Int> { get }
+}
+public protocol DataPreprocessor {
+  func preprocess(_ data: Foundation.Data) throws -> Foundation.Data
+}
+public struct PassthroughPreprocessor : OnepayIPG.DataPreprocessor {
+  public init()
+  public func preprocess(_ data: Foundation.Data) throws -> Foundation.Data
+}
+public struct GoogleXSSIPreprocessor : OnepayIPG.DataPreprocessor {
+  public init()
+  public func preprocess(_ data: Foundation.Data) throws -> Foundation.Data
+}
+extension OnepayIPG.DataPreprocessor where Self == OnepayIPG.PassthroughPreprocessor {
+  public static var passthrough: OnepayIPG.PassthroughPreprocessor {
+    get
+  }
+}
+extension OnepayIPG.DataPreprocessor where Self == OnepayIPG.GoogleXSSIPreprocessor {
+  public static var googleXSSI: OnepayIPG.GoogleXSSIPreprocessor {
+    get
+  }
+}
+extension OnepayIPG.ResponseSerializer {
+  public static var defaultDataPreprocessor: OnepayIPG.DataPreprocessor {
+    get
+  }
+  public static var defaultEmptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> {
+    get
+  }
+  public static var defaultEmptyResponseCodes: Swift.Set<Swift.Int> {
+    get
+  }
+  public var dataPreprocessor: OnepayIPG.DataPreprocessor {
+    get
+  }
+  public var emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> {
+    get
+  }
+  public var emptyResponseCodes: Swift.Set<Swift.Int> {
+    get
+  }
+  public func requestAllowsEmptyResponseData(_ request: Foundation.URLRequest?) -> Swift.Bool?
+  public func responseAllowsEmptyResponseData(_ response: Foundation.HTTPURLResponse?) -> Swift.Bool?
+  public func emptyResponseAllowed(forRequest request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?) -> Swift.Bool
+}
+extension OnepayIPG.DownloadResponseSerializerProtocol where Self : OnepayIPG.DataResponseSerializerProtocol {
+  public func serializeDownload(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, fileURL: Foundation.URL?, error: Swift.Error?) throws -> Self.SerializedObject
+}
+extension OnepayIPG.DataRequest {
+  @discardableResult
+  public func response(queue: Dispatch.DispatchQueue = .main, completionHandler: @escaping (OnepayIPG.AFDataResponse<Foundation.Data?>) -> Swift.Void) -> Self
+  @discardableResult
+  public func response<Serializer>(queue: Dispatch.DispatchQueue = .main, responseSerializer: Serializer, completionHandler: @escaping (OnepayIPG.AFDataResponse<Serializer.SerializedObject>) -> Swift.Void) -> Self where Serializer : OnepayIPG.DataResponseSerializerProtocol
+  @discardableResult
+  public func response<Serializer>(queue: Dispatch.DispatchQueue = .main, responseSerializer: Serializer, completionHandler: @escaping (OnepayIPG.AFDataResponse<Serializer.SerializedObject>) -> Swift.Void) -> Self where Serializer : OnepayIPG.ResponseSerializer
+}
+extension OnepayIPG.DownloadRequest {
+  @discardableResult
+  public func response(queue: Dispatch.DispatchQueue = .main, completionHandler: @escaping (OnepayIPG.AFDownloadResponse<Foundation.URL?>) -> Swift.Void) -> Self
+  @discardableResult
+  public func response<Serializer>(queue: Dispatch.DispatchQueue = .main, responseSerializer: Serializer, completionHandler: @escaping (OnepayIPG.AFDownloadResponse<Serializer.SerializedObject>) -> Swift.Void) -> Self where Serializer : OnepayIPG.DownloadResponseSerializerProtocol
+  @discardableResult
+  public func response<Serializer>(queue: Dispatch.DispatchQueue = .main, responseSerializer: Serializer, completionHandler: @escaping (OnepayIPG.AFDownloadResponse<Serializer.SerializedObject>) -> Swift.Void) -> Self where Serializer : OnepayIPG.ResponseSerializer
+}
+public struct URLResponseSerializer : OnepayIPG.DownloadResponseSerializerProtocol {
+  public init()
+  public func serializeDownload(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, fileURL: Foundation.URL?, error: Swift.Error?) throws -> Foundation.URL
+  public typealias SerializedObject = Foundation.URL
+}
+extension OnepayIPG.DownloadResponseSerializerProtocol where Self == OnepayIPG.URLResponseSerializer {
+  public static var url: OnepayIPG.URLResponseSerializer {
+    get
+  }
+}
+extension OnepayIPG.DownloadRequest {
+  @discardableResult
+  public func responseURL(queue: Dispatch.DispatchQueue = .main, completionHandler: @escaping (OnepayIPG.AFDownloadResponse<Foundation.URL>) -> Swift.Void) -> Self
+}
+final public class DataResponseSerializer : OnepayIPG.ResponseSerializer {
+  final public let dataPreprocessor: OnepayIPG.DataPreprocessor
+  final public let emptyResponseCodes: Swift.Set<Swift.Int>
+  final public let emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod>
+  public init(dataPreprocessor: OnepayIPG.DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = DataResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods)
+  final public func serialize(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, data: Foundation.Data?, error: Swift.Error?) throws -> Foundation.Data
+  public typealias SerializedObject = Foundation.Data
+  @objc deinit
+}
+extension OnepayIPG.ResponseSerializer where Self == OnepayIPG.DataResponseSerializer {
+  public static var data: OnepayIPG.DataResponseSerializer {
+    get
+  }
+  public static func data(dataPreprocessor: OnepayIPG.DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = DataResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DataResponseSerializer
+}
+extension OnepayIPG.DataRequest {
+  @discardableResult
+  public func responseData(queue: Dispatch.DispatchQueue = .main, dataPreprocessor: OnepayIPG.DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = DataResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods, completionHandler: @escaping (OnepayIPG.AFDataResponse<Foundation.Data>) -> Swift.Void) -> Self
+}
+extension OnepayIPG.DownloadRequest {
+  @discardableResult
+  public func responseData(queue: Dispatch.DispatchQueue = .main, dataPreprocessor: OnepayIPG.DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = DataResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods, completionHandler: @escaping (OnepayIPG.AFDownloadResponse<Foundation.Data>) -> Swift.Void) -> Self
+}
+final public class StringResponseSerializer : OnepayIPG.ResponseSerializer {
+  final public let dataPreprocessor: OnepayIPG.DataPreprocessor
+  final public let encoding: Swift.String.Encoding?
+  final public let emptyResponseCodes: Swift.Set<Swift.Int>
+  final public let emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod>
+  public init(dataPreprocessor: OnepayIPG.DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor, encoding: Swift.String.Encoding? = nil, emptyResponseCodes: Swift.Set<Swift.Int> = StringResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods)
+  final public func serialize(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, data: Foundation.Data?, error: Swift.Error?) throws -> Swift.String
+  public typealias SerializedObject = Swift.String
+  @objc deinit
+}
+extension OnepayIPG.ResponseSerializer where Self == OnepayIPG.StringResponseSerializer {
+  public static var string: OnepayIPG.StringResponseSerializer {
+    get
+  }
+  public static func string(dataPreprocessor: OnepayIPG.DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor, encoding: Swift.String.Encoding? = nil, emptyResponseCodes: Swift.Set<Swift.Int> = StringResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.StringResponseSerializer
+}
+extension OnepayIPG.DataRequest {
+  @discardableResult
+  public func responseString(queue: Dispatch.DispatchQueue = .main, dataPreprocessor: OnepayIPG.DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor, encoding: Swift.String.Encoding? = nil, emptyResponseCodes: Swift.Set<Swift.Int> = StringResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods, completionHandler: @escaping (OnepayIPG.AFDataResponse<Swift.String>) -> Swift.Void) -> Self
+}
+extension OnepayIPG.DownloadRequest {
+  @discardableResult
+  public func responseString(queue: Dispatch.DispatchQueue = .main, dataPreprocessor: OnepayIPG.DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor, encoding: Swift.String.Encoding? = nil, emptyResponseCodes: Swift.Set<Swift.Int> = StringResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods, completionHandler: @escaping (OnepayIPG.AFDownloadResponse<Swift.String>) -> Swift.Void) -> Self
+}
+@available(*, deprecated, message: "JSONResponseSerializer deprecated and will be removed in Alamofire 6. Use DecodableResponseSerializer instead.")
+final public class JSONResponseSerializer : OnepayIPG.ResponseSerializer {
+  final public let dataPreprocessor: OnepayIPG.DataPreprocessor
+  final public let emptyResponseCodes: Swift.Set<Swift.Int>
+  final public let emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod>
+  final public let options: Foundation.JSONSerialization.ReadingOptions
+  public init(dataPreprocessor: OnepayIPG.DataPreprocessor = JSONResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = JSONResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = JSONResponseSerializer.defaultEmptyRequestMethods, options: Foundation.JSONSerialization.ReadingOptions = .allowFragments)
+  final public func serialize(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, data: Foundation.Data?, error: Swift.Error?) throws -> Any
+  public typealias SerializedObject = Any
+  @objc deinit
+}
+extension OnepayIPG.DataRequest {
+  @available(*, deprecated, message: "responseJSON deprecated and will be removed in Alamofire 6. Use responseDecodable instead.")
+  @discardableResult
+  public func responseJSON(queue: Dispatch.DispatchQueue = .main, dataPreprocessor: OnepayIPG.DataPreprocessor = JSONResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = JSONResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = JSONResponseSerializer.defaultEmptyRequestMethods, options: Foundation.JSONSerialization.ReadingOptions = .allowFragments, completionHandler: @escaping (OnepayIPG.AFDataResponse<Any>) -> Swift.Void) -> Self
+}
+extension OnepayIPG.DownloadRequest {
+  @available(*, deprecated, message: "responseJSON deprecated and will be removed in Alamofire 6. Use responseDecodable instead.")
+  @discardableResult
+  public func responseJSON(queue: Dispatch.DispatchQueue = .main, dataPreprocessor: OnepayIPG.DataPreprocessor = JSONResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = JSONResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = JSONResponseSerializer.defaultEmptyRequestMethods, options: Foundation.JSONSerialization.ReadingOptions = .allowFragments, completionHandler: @escaping (OnepayIPG.AFDownloadResponse<Any>) -> Swift.Void) -> Self
+}
+public protocol EmptyResponse {
+  static func emptyValue() -> Self
+}
+public struct Empty : Swift.Codable {
+  public static let value: OnepayIPG.Empty
+  public func encode(to encoder: Swift.Encoder) throws
+  public init(from decoder: Swift.Decoder) throws
+}
+extension OnepayIPG.Empty : OnepayIPG.EmptyResponse {
+  public static func emptyValue() -> OnepayIPG.Empty
+}
+public protocol DataDecoder {
+  func decode<D>(_ type: D.Type, from data: Foundation.Data) throws -> D where D : Swift.Decodable
+}
+extension Foundation.JSONDecoder : OnepayIPG.DataDecoder {
+}
+extension Foundation.PropertyListDecoder : OnepayIPG.DataDecoder {
+}
+final public class DecodableResponseSerializer<T> : OnepayIPG.ResponseSerializer where T : Swift.Decodable {
+  final public let dataPreprocessor: OnepayIPG.DataPreprocessor
+  final public let decoder: OnepayIPG.DataDecoder
+  final public let emptyResponseCodes: Swift.Set<Swift.Int>
+  final public let emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod>
+  public init(dataPreprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer.defaultEmptyRequestMethods)
+  final public func serialize(request: Foundation.URLRequest?, response: Foundation.HTTPURLResponse?, data: Foundation.Data?, error: Swift.Error?) throws -> T
+  public typealias SerializedObject = T
+  @objc deinit
+}
+extension OnepayIPG.ResponseSerializer {
+  public static func decodable<T>(of type: T.Type, dataPreprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<T>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<T>.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<T>.defaultEmptyRequestMethods) -> OnepayIPG.DecodableResponseSerializer<T> where Self == OnepayIPG.DecodableResponseSerializer<T>, T : Swift.Decodable
+}
+extension OnepayIPG.DataRequest {
+  @discardableResult
+  public func responseDecodable<T>(of type: T.Type = T.self, queue: Dispatch.DispatchQueue = .main, dataPreprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<T>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<T>.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<T>.defaultEmptyRequestMethods, completionHandler: @escaping (OnepayIPG.AFDataResponse<T>) -> Swift.Void) -> Self where T : Swift.Decodable
+}
+extension OnepayIPG.DownloadRequest {
+  @discardableResult
+  public func responseDecodable<T>(of type: T.Type = T.self, queue: Dispatch.DispatchQueue = .main, dataPreprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<T>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<T>.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<T>.defaultEmptyRequestMethods, completionHandler: @escaping (OnepayIPG.AFDownloadResponse<T>) -> Swift.Void) -> Self where T : Swift.Decodable
+}
+public protocol DataStreamSerializer {
+  associatedtype SerializedObject
+  func serialize(_ data: Foundation.Data) throws -> Self.SerializedObject
+}
+public struct DecodableStreamSerializer<T> : OnepayIPG.DataStreamSerializer where T : Swift.Decodable {
+  public let decoder: OnepayIPG.DataDecoder
+  public let dataPreprocessor: OnepayIPG.DataPreprocessor
+  public init(decoder: OnepayIPG.DataDecoder = JSONDecoder(), dataPreprocessor: OnepayIPG.DataPreprocessor = PassthroughPreprocessor())
+  public func serialize(_ data: Foundation.Data) throws -> T
+  public typealias SerializedObject = T
+}
+public struct PassthroughStreamSerializer : OnepayIPG.DataStreamSerializer {
+  public init()
+  public func serialize(_ data: Foundation.Data) throws -> Foundation.Data
+  public typealias SerializedObject = Foundation.Data
+}
+public struct StringStreamSerializer : OnepayIPG.DataStreamSerializer {
+  public init()
+  public func serialize(_ data: Foundation.Data) throws -> Swift.String
+  public typealias SerializedObject = Swift.String
+}
+extension OnepayIPG.DataStreamSerializer {
+  public static func decodable<T>(of type: T.Type, decoder: OnepayIPG.DataDecoder = JSONDecoder(), dataPreprocessor: OnepayIPG.DataPreprocessor = PassthroughPreprocessor()) -> Self where Self == OnepayIPG.DecodableStreamSerializer<T>, T : Swift.Decodable
+}
+extension OnepayIPG.DataStreamSerializer where Self == OnepayIPG.PassthroughStreamSerializer {
+  public static var passthrough: OnepayIPG.PassthroughStreamSerializer {
+    get
+  }
+}
+extension OnepayIPG.DataStreamSerializer where Self == OnepayIPG.StringStreamSerializer {
+  public static var string: OnepayIPG.StringStreamSerializer {
+    get
+  }
+}
+extension OnepayIPG.DataStreamRequest {
+  @discardableResult
+  final public func responseStream(on queue: Dispatch.DispatchQueue = .main, stream: @escaping OnepayIPG.DataStreamRequest.Handler<Foundation.Data, Swift.Never>) -> Self
+  @discardableResult
+  final public func responseStream<Serializer>(using serializer: Serializer, on queue: Dispatch.DispatchQueue = .main, stream: @escaping OnepayIPG.DataStreamRequest.Handler<Serializer.SerializedObject, OnepayIPG.AFError>) -> Self where Serializer : OnepayIPG.DataStreamSerializer
+  @discardableResult
+  final public func responseStreamString(on queue: Dispatch.DispatchQueue = .main, stream: @escaping OnepayIPG.DataStreamRequest.Handler<Swift.String, Swift.Never>) -> Self
+  @discardableResult
+  final public func responseStreamDecodable<T>(of type: T.Type = T.self, on queue: Dispatch.DispatchQueue = .main, using decoder: OnepayIPG.DataDecoder = JSONDecoder(), preprocessor: OnepayIPG.DataPreprocessor = PassthroughPreprocessor(), stream: @escaping OnepayIPG.DataStreamRequest.Handler<T, OnepayIPG.AFError>) -> Self where T : Swift.Decodable
+}
+public struct GatewayMap {
+  public enum DecodingError : Swift.Error {
+    case invalidData([Swift.CodingKey])
+  }
+  public init()
+  public init(_ dictionary: [Swift.String : Any])
+  public var dictionary: [Swift.String : Any] {
+    get
+  }
+  public var description: Swift.String {
+    get
+  }
+  public subscript(key: Swift.String) -> Any? {
+    get
+    set(newValue)
+  }
+  public subscript(at path: Swift.String) -> Any? {
+    get
+    set(newValue)
+  }
+}
+extension OnepayIPG.GatewayMap : Swift.ExpressibleByDictionaryLiteral {
+  public init(dictionaryLiteral elements: (Swift.String, Any)...)
+  public typealias Key = Swift.String
+  public typealias Value = Any
+}
+extension OnepayIPG.GatewayMap : Swift.Codable {
+  public func encode(to encoder: Swift.Encoder) throws
+  public init(from decoder: Swift.Decoder) throws
+}
+extension OnepayIPG.GatewayMap : Swift.Equatable {
+  public static func == (lhs: OnepayIPG.GatewayMap, rhs: OnepayIPG.GatewayMap) -> Swift.Bool
+}
+extension OnepayIPG.GatewayMap : Swift.CustomDebugStringConvertible {
+  public var debugDescription: Swift.String {
+    get
+  }
+}
+@_hasMissingDesignatedInitializers open class NetworkReachabilityManager {
+  public enum NetworkReachabilityStatus {
+    case unknown
+    case notReachable
+    case reachable(OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus.ConnectionType)
+    public enum ConnectionType {
+      case ethernetOrWiFi
+      case cellular
+      public static func == (a: OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus.ConnectionType, b: OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus.ConnectionType) -> Swift.Bool
+      public func hash(into hasher: inout Swift.Hasher)
+      public var hashValue: Swift.Int {
+        get
+      }
+    }
+  }
+  public typealias Listener = (OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus) -> Swift.Void
+  public static let `default`: OnepayIPG.NetworkReachabilityManager?
+  open var isReachable: Swift.Bool {
+    get
+  }
+  open var isReachableOnCellular: Swift.Bool {
+    get
+  }
+  open var isReachableOnEthernetOrWiFi: Swift.Bool {
+    get
+  }
+  final public let reachabilityQueue: Dispatch.DispatchQueue
+  open var flags: SystemConfiguration.SCNetworkReachabilityFlags? {
+    get
+  }
+  open var status: OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus {
+    get
+  }
+  convenience public init?(host: Swift.String)
+  convenience public init?()
+  @objc deinit
+  @discardableResult
+  open func startListening(onQueue queue: Dispatch.DispatchQueue = .main, onUpdatePerforming listener: @escaping OnepayIPG.NetworkReachabilityManager.Listener) -> Swift.Bool
+  open func stopListening()
+}
+extension OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus : Swift.Equatable {
+  public static func == (a: OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus, b: OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus) -> Swift.Bool
+}
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension OnepayIPG.Request {
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func uploadProgress(bufferingPolicy: OnepayIPG.StreamOf<Foundation.Progress>.BufferingPolicy = .unbounded) -> OnepayIPG.StreamOf<Foundation.Progress>
+  #endif
+
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func downloadProgress(bufferingPolicy: OnepayIPG.StreamOf<Foundation.Progress>.BufferingPolicy = .unbounded) -> OnepayIPG.StreamOf<Foundation.Progress>
+  #endif
+
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func urlRequests(bufferingPolicy: OnepayIPG.StreamOf<Foundation.URLRequest>.BufferingPolicy = .unbounded) -> OnepayIPG.StreamOf<Foundation.URLRequest>
+  #endif
+
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func urlSessionTasks(bufferingPolicy: OnepayIPG.StreamOf<Foundation.URLSessionTask>.BufferingPolicy = .unbounded) -> OnepayIPG.StreamOf<Foundation.URLSessionTask>
+  #endif
+
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func cURLDescriptions(bufferingPolicy: OnepayIPG.StreamOf<Swift.String>.BufferingPolicy = .unbounded) -> OnepayIPG.StreamOf<Swift.String>
+  #endif
+
+}
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public struct DataTask<Value> {
+  
+  #if compiler(>=5.3) && $EffectfulProp
+  public var response: OnepayIPG.DataResponse<Value, OnepayIPG.AFError> {
+    get async
+  }
+  #endif
+
+  
+  #if compiler(>=5.3) && $EffectfulProp
+  public var result: Swift.Result<Value, OnepayIPG.AFError> {
+    get async
+  }
+  #endif
+
+  
+  #if compiler(>=5.3) && $EffectfulProp
+  public var value: Value {
+    get async throws
+  }
+  #endif
+
+  public func cancel()
+  public func resume()
+  public func suspend()
+}
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension OnepayIPG.DataRequest {
+  public func serializingData(automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false, dataPreprocessor: OnepayIPG.DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = DataResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DataTask<Foundation.Data>
+  public func serializingDecodable<Value>(_ type: Value.Type = Value.self, automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false, dataPreprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<Value>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<Value>.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<Value>.defaultEmptyRequestMethods) -> OnepayIPG.DataTask<Value> where Value : Swift.Decodable
+  public func serializingString(automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false, dataPreprocessor: OnepayIPG.DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor, encoding: Swift.String.Encoding? = nil, emptyResponseCodes: Swift.Set<Swift.Int> = StringResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DataTask<Swift.String>
+  public func serializingResponse<Serializer>(using serializer: Serializer, automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false) -> OnepayIPG.DataTask<Serializer.SerializedObject> where Serializer : OnepayIPG.ResponseSerializer
+  public func serializingResponse<Serializer>(using serializer: Serializer, automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false) -> OnepayIPG.DataTask<Serializer.SerializedObject> where Serializer : OnepayIPG.DataResponseSerializerProtocol
+}
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public struct DownloadTask<Value> {
+  
+  #if compiler(>=5.3) && $EffectfulProp
+  public var response: OnepayIPG.DownloadResponse<Value, OnepayIPG.AFError> {
+    get async
+  }
+  #endif
+
+  
+  #if compiler(>=5.3) && $EffectfulProp
+  public var result: Swift.Result<Value, OnepayIPG.AFError> {
+    get async
+  }
+  #endif
+
+  
+  #if compiler(>=5.3) && $EffectfulProp
+  public var value: Value {
+    get async throws
+  }
+  #endif
+
+  public func cancel()
+  public func resume()
+  public func suspend()
+}
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension OnepayIPG.DownloadRequest {
+  public func serializingData(automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false, dataPreprocessor: OnepayIPG.DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = DataResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DownloadTask<Foundation.Data>
+  public func serializingDecodable<Value>(_ type: Value.Type = Value.self, automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false, dataPreprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<Value>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<Value>.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<Value>.defaultEmptyRequestMethods) -> OnepayIPG.DownloadTask<Value> where Value : Swift.Decodable
+  public func serializingDownloadedFileURL(automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false) -> OnepayIPG.DownloadTask<Foundation.URL>
+  public func serializingString(automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false, dataPreprocessor: OnepayIPG.DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor, encoding: Swift.String.Encoding? = nil, emptyResponseCodes: Swift.Set<Swift.Int> = StringResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DownloadTask<Swift.String>
+  public func serializingDownload<Serializer>(using serializer: Serializer, automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false) -> OnepayIPG.DownloadTask<Serializer.SerializedObject> where Serializer : OnepayIPG.ResponseSerializer
+  public func serializingDownload<Serializer>(using serializer: Serializer, automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = false) -> OnepayIPG.DownloadTask<Serializer.SerializedObject> where Serializer : OnepayIPG.DownloadResponseSerializerProtocol
+}
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public struct DataStreamTask {
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public typealias Stream<Success, Failure> = OnepayIPG.StreamOf<OnepayIPG.DataStreamRequest.Stream<Success, Failure>> where Failure : Swift.Error
+  #endif
+
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func streamingData(automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = true, bufferingPolicy: OnepayIPG.DataStreamTask.Stream<Foundation.Data, Swift.Never>.BufferingPolicy = .unbounded) -> OnepayIPG.DataStreamTask.Stream<Foundation.Data, Swift.Never>
+  #endif
+
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func streamingStrings(automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = true, bufferingPolicy: OnepayIPG.DataStreamTask.Stream<Swift.String, Swift.Never>.BufferingPolicy = .unbounded) -> OnepayIPG.DataStreamTask.Stream<Swift.String, Swift.Never>
+  #endif
+
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func streamingDecodables<T>(_ type: T.Type = T.self, automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = true, bufferingPolicy: OnepayIPG.DataStreamTask.Stream<T, OnepayIPG.AFError>.BufferingPolicy = .unbounded) -> OnepayIPG.DataStreamTask.Stream<T, OnepayIPG.AFError> where T : Swift.Decodable
+  #endif
+
+  
+  #if compiler(>=5.3) && $RethrowsProtocol
+  public func streamingResponses<Serializer>(serializedUsing serializer: Serializer, automaticallyCancelling shouldAutomaticallyCancel: Swift.Bool = true, bufferingPolicy: OnepayIPG.DataStreamTask.Stream<Serializer.SerializedObject, OnepayIPG.AFError>.BufferingPolicy = .unbounded) -> OnepayIPG.DataStreamTask.Stream<Serializer.SerializedObject, OnepayIPG.AFError> where Serializer : OnepayIPG.DataStreamSerializer
+  #endif
+
+  public func cancel()
+  public func resume()
+  public func suspend()
+}
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension OnepayIPG.DataStreamRequest {
+  final public func streamTask() -> OnepayIPG.DataStreamTask
+}
+
+#if compiler(>=5.3) && $RethrowsProtocol
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+public struct StreamOf<Element> : _Concurrency.AsyncSequence {
+  public typealias AsyncIterator = OnepayIPG.StreamOf<Element>.Iterator
+  public typealias BufferingPolicy = _Concurrency.AsyncStream<Element>.Continuation.BufferingPolicy
+  public func makeAsyncIterator() -> OnepayIPG.StreamOf<Element>.Iterator
+  public struct Iterator : _Concurrency.AsyncIteratorProtocol {
+    
+    #if compiler(>=5.3) && $AsyncAwait
+    public mutating func next() async -> Element?
+    #endif
+
+  }
+}
+#endif
+
+@objc open class SessionDelegate : ObjectiveC.NSObject {
+  public init(fileManager: Foundation.FileManager = .default)
+  @objc deinit
+}
+extension OnepayIPG.SessionDelegate : Foundation.URLSessionDelegate {
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, didBecomeInvalidWithError error: Swift.Error?)
+}
+extension OnepayIPG.SessionDelegate : Foundation.URLSessionTaskDelegate {
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didReceive challenge: Foundation.URLAuthenticationChallenge, completionHandler: @escaping (Foundation.URLSession.AuthChallengeDisposition, Foundation.URLCredential?) -> Swift.Void)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didSendBodyData bytesSent: Swift.Int64, totalBytesSent: Swift.Int64, totalBytesExpectedToSend: Swift.Int64)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, needNewBodyStream completionHandler: @escaping (Foundation.InputStream?) -> Swift.Void)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, willPerformHTTPRedirection response: Foundation.HTTPURLResponse, newRequest request: Foundation.URLRequest, completionHandler: @escaping (Foundation.URLRequest?) -> Swift.Void)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didFinishCollecting metrics: Foundation.URLSessionTaskMetrics)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, task: Foundation.URLSessionTask, didCompleteWithError error: Swift.Error?)
+  @available(macOS 10.13, iOS 11.0, tvOS 11.0, watchOS 4.0, *)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, taskIsWaitingForConnectivity task: Foundation.URLSessionTask)
+}
+extension OnepayIPG.SessionDelegate : Foundation.URLSessionDataDelegate {
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, didReceive data: Foundation.Data)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, dataTask: Foundation.URLSessionDataTask, willCacheResponse proposedResponse: Foundation.CachedURLResponse, completionHandler: @escaping (Foundation.CachedURLResponse?) -> Swift.Void)
+}
+extension OnepayIPG.SessionDelegate : Foundation.URLSessionDownloadDelegate {
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didResumeAtOffset fileOffset: Swift.Int64, expectedTotalBytes: Swift.Int64)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didWriteData bytesWritten: Swift.Int64, totalBytesWritten: Swift.Int64, totalBytesExpectedToWrite: Swift.Int64)
+  @objc dynamic open func urlSession(_ session: Foundation.URLSession, downloadTask: Foundation.URLSessionDownloadTask, didFinishDownloadingTo location: Foundation.URL)
+}
+public protocol AuthenticationCredential {
+  var requiresRefresh: Swift.Bool { get }
+}
+public protocol Authenticator : AnyObject {
+  associatedtype Credential : OnepayIPG.AuthenticationCredential
+  func apply(_ credential: Self.Credential, to urlRequest: inout Foundation.URLRequest)
+  func refresh(_ credential: Self.Credential, for session: OnepayIPG.Session, completion: @escaping (Swift.Result<Self.Credential, Swift.Error>) -> Swift.Void)
+  func didRequest(_ urlRequest: Foundation.URLRequest, with response: Foundation.HTTPURLResponse, failDueToAuthenticationError error: Swift.Error) -> Swift.Bool
+  func isRequest(_ urlRequest: Foundation.URLRequest, authenticatedWith credential: Self.Credential) -> Swift.Bool
+}
+public enum AuthenticationError : Swift.Error {
+  case missingCredential
+  case excessiveRefresh
+  public static func == (a: OnepayIPG.AuthenticationError, b: OnepayIPG.AuthenticationError) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public class AuthenticationInterceptor<AuthenticatorType> : OnepayIPG.RequestInterceptor where AuthenticatorType : OnepayIPG.Authenticator {
+  public typealias Credential = AuthenticatorType.Credential
+  public struct RefreshWindow {
+    public let interval: Foundation.TimeInterval
+    public let maximumAttempts: Swift.Int
+    public init(interval: Foundation.TimeInterval = 30.0, maximumAttempts: Swift.Int = 5)
+  }
+  public var credential: OnepayIPG.AuthenticationInterceptor<AuthenticatorType>.Credential? {
+    get
+    set
+  }
+  public init(authenticator: AuthenticatorType, credential: OnepayIPG.AuthenticationInterceptor<AuthenticatorType>.Credential? = nil, refreshWindow: OnepayIPG.AuthenticationInterceptor<AuthenticatorType>.RefreshWindow? = RefreshWindow())
+  public func adapt(_ urlRequest: Foundation.URLRequest, for session: OnepayIPG.Session, completion: @escaping (Swift.Result<Foundation.URLRequest, Swift.Error>) -> Swift.Void)
+  public func retry(_ request: OnepayIPG.Request, for session: OnepayIPG.Session, dueTo error: Swift.Error, completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void)
+  @objc deinit
+}
+final public class URLEncodedFormEncoder {
+  public enum ArrayEncoding {
+    case brackets
+    case noBrackets
+    case indexInBrackets
+    public static func == (a: OnepayIPG.URLEncodedFormEncoder.ArrayEncoding, b: OnepayIPG.URLEncodedFormEncoder.ArrayEncoding) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public enum BoolEncoding {
+    case numeric
+    case literal
+    public static func == (a: OnepayIPG.URLEncodedFormEncoder.BoolEncoding, b: OnepayIPG.URLEncodedFormEncoder.BoolEncoding) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public enum DataEncoding {
+    case deferredToData
+    case base64
+    case custom((Foundation.Data) throws -> Swift.String)
+  }
+  public enum DateEncoding {
+    case deferredToDate
+    case secondsSince1970
+    case millisecondsSince1970
+    case iso8601
+    case formatted(Foundation.DateFormatter)
+    case custom((Foundation.Date) throws -> Swift.String)
+  }
+  public enum KeyEncoding {
+    case useDefaultKeys
+    case convertToSnakeCase
+    case convertToKebabCase
+    case capitalized
+    case uppercased
+    case lowercased
+    case custom((Swift.String) -> Swift.String)
+  }
+  public enum SpaceEncoding {
+    case percentEscaped
+    case plusReplaced
+    public static func == (a: OnepayIPG.URLEncodedFormEncoder.SpaceEncoding, b: OnepayIPG.URLEncodedFormEncoder.SpaceEncoding) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public enum Error : Swift.Error {
+    case invalidRootObject(Swift.String)
+  }
+  final public let alphabetizeKeyValuePairs: Swift.Bool
+  final public let arrayEncoding: OnepayIPG.URLEncodedFormEncoder.ArrayEncoding
+  final public let boolEncoding: OnepayIPG.URLEncodedFormEncoder.BoolEncoding
+  final public let dataEncoding: OnepayIPG.URLEncodedFormEncoder.DataEncoding
+  final public let dateEncoding: OnepayIPG.URLEncodedFormEncoder.DateEncoding
+  final public let keyEncoding: OnepayIPG.URLEncodedFormEncoder.KeyEncoding
+  final public let spaceEncoding: OnepayIPG.URLEncodedFormEncoder.SpaceEncoding
+  final public var allowedCharacters: Foundation.CharacterSet
+  public init(alphabetizeKeyValuePairs: Swift.Bool = true, arrayEncoding: OnepayIPG.URLEncodedFormEncoder.ArrayEncoding = .brackets, boolEncoding: OnepayIPG.URLEncodedFormEncoder.BoolEncoding = .numeric, dataEncoding: OnepayIPG.URLEncodedFormEncoder.DataEncoding = .base64, dateEncoding: OnepayIPG.URLEncodedFormEncoder.DateEncoding = .deferredToDate, keyEncoding: OnepayIPG.URLEncodedFormEncoder.KeyEncoding = .useDefaultKeys, spaceEncoding: OnepayIPG.URLEncodedFormEncoder.SpaceEncoding = .percentEscaped, allowedCharacters: Foundation.CharacterSet = .afURLQueryAllowed)
+  final public func encode(_ value: Swift.Encodable) throws -> Swift.String
+  final public func encode(_ value: Swift.Encodable) throws -> Foundation.Data
+  @objc deinit
+}
+extension Foundation.CharacterSet {
+  public static let afURLQueryAllowed: Foundation.CharacterSet
+}
+@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+public struct DataResponsePublisher<Value> : Combine.Publisher {
+  public typealias Output = OnepayIPG.DataResponse<Value, OnepayIPG.AFError>
+  public typealias Failure = Swift.Never
+  public init<Serializer>(_ request: OnepayIPG.DataRequest, queue: Dispatch.DispatchQueue, serializer: Serializer) where Value == Serializer.SerializedObject, Serializer : OnepayIPG.ResponseSerializer
+  public init<Serializer>(_ request: OnepayIPG.DataRequest, queue: Dispatch.DispatchQueue, serializer: Serializer) where Value == Serializer.SerializedObject, Serializer : OnepayIPG.DataResponseSerializerProtocol
+  public func result() -> Combine.AnyPublisher<Swift.Result<Value, OnepayIPG.AFError>, Swift.Never>
+  public func value() -> Combine.AnyPublisher<Value, OnepayIPG.AFError>
+  public func receive<S>(subscriber: S) where S : Combine.Subscriber, S.Failure == OnepayIPG.DataResponsePublisher<Value>.Failure, S.Input == OnepayIPG.DataResponsePublisher<Value>.Output
+}
+@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+extension OnepayIPG.DataResponsePublisher where Value == Foundation.Data? {
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public init(_ request: OnepayIPG.DataRequest, queue: Dispatch.DispatchQueue)
+}
+extension OnepayIPG.DataRequest {
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishResponse<Serializer, T>(using serializer: Serializer, on queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DataResponsePublisher<T> where Serializer : OnepayIPG.ResponseSerializer, T == Serializer.SerializedObject
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishData(queue: Dispatch.DispatchQueue = .main, preprocessor: OnepayIPG.DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = DataResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DataResponsePublisher<Foundation.Data>
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishString(queue: Dispatch.DispatchQueue = .main, preprocessor: OnepayIPG.DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor, encoding: Swift.String.Encoding? = nil, emptyResponseCodes: Swift.Set<Swift.Int> = StringResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DataResponsePublisher<Swift.String>
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  @available(*, deprecated, message: "Renamed publishDecodable(type:queue:preprocessor:decoder:emptyResponseCodes:emptyRequestMethods).")
+  @_disfavoredOverload public func publishDecodable<T>(type: T.Type = T.self, queue: Dispatch.DispatchQueue = .main, preprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<T>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<T>.defaultEmptyResponseCodes, emptyResponseMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<T>.defaultEmptyRequestMethods) -> OnepayIPG.DataResponsePublisher<T> where T : Swift.Decodable
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishDecodable<T>(type: T.Type = T.self, queue: Dispatch.DispatchQueue = .main, preprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<T>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<T>.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<T>.defaultEmptyRequestMethods) -> OnepayIPG.DataResponsePublisher<T> where T : Swift.Decodable
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishUnserialized(queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DataResponsePublisher<Foundation.Data?>
+}
+@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+public struct DataStreamPublisher<Value> : Combine.Publisher {
+  public typealias Output = OnepayIPG.DataStreamRequest.Stream<Value, OnepayIPG.AFError>
+  public typealias Failure = Swift.Never
+  public init<Serializer>(_ request: OnepayIPG.DataStreamRequest, queue: Dispatch.DispatchQueue, serializer: Serializer) where Value == Serializer.SerializedObject, Serializer : OnepayIPG.DataStreamSerializer
+  public func result() -> Combine.AnyPublisher<Swift.Result<Value, OnepayIPG.AFError>, Swift.Never>
+  public func value() -> Combine.AnyPublisher<Value, OnepayIPG.AFError>
+  public func receive<S>(subscriber: S) where S : Combine.Subscriber, S.Failure == OnepayIPG.DataStreamPublisher<Value>.Failure, S.Input == OnepayIPG.DataStreamPublisher<Value>.Output
+}
+extension OnepayIPG.DataStreamRequest {
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  final public func publishStream<Serializer>(using serializer: Serializer, on queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DataStreamPublisher<Serializer.SerializedObject> where Serializer : OnepayIPG.DataStreamSerializer
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  final public func publishData(queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DataStreamPublisher<Foundation.Data>
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  final public func publishString(queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DataStreamPublisher<Swift.String>
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  final public func publishDecodable<T>(type: T.Type = T.self, queue: Dispatch.DispatchQueue = .main, decoder: OnepayIPG.DataDecoder = JSONDecoder(), preprocessor: OnepayIPG.DataPreprocessor = PassthroughPreprocessor()) -> OnepayIPG.DataStreamPublisher<T> where T : Swift.Decodable
+}
+@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+public struct DownloadResponsePublisher<Value> : Combine.Publisher {
+  public typealias Output = OnepayIPG.DownloadResponse<Value, OnepayIPG.AFError>
+  public typealias Failure = Swift.Never
+  public init<Serializer>(_ request: OnepayIPG.DownloadRequest, queue: Dispatch.DispatchQueue, serializer: Serializer) where Value == Serializer.SerializedObject, Serializer : OnepayIPG.ResponseSerializer
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public init<Serializer>(_ request: OnepayIPG.DownloadRequest, queue: Dispatch.DispatchQueue, serializer: Serializer) where Value == Serializer.SerializedObject, Serializer : OnepayIPG.DownloadResponseSerializerProtocol
+  public func result() -> Combine.AnyPublisher<Swift.Result<Value, OnepayIPG.AFError>, Swift.Never>
+  public func value() -> Combine.AnyPublisher<Value, OnepayIPG.AFError>
+  public func receive<S>(subscriber: S) where S : Combine.Subscriber, S.Failure == OnepayIPG.DownloadResponsePublisher<Value>.Failure, S.Input == OnepayIPG.DownloadResponsePublisher<Value>.Output
+}
+extension OnepayIPG.DownloadRequest {
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishResponse<Serializer, T>(using serializer: Serializer, on queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DownloadResponsePublisher<T> where Serializer : OnepayIPG.ResponseSerializer, T == Serializer.SerializedObject
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishResponse<Serializer, T>(using serializer: Serializer, on queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DownloadResponsePublisher<T> where Serializer : OnepayIPG.DownloadResponseSerializerProtocol, T == Serializer.SerializedObject
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishURL(queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DownloadResponsePublisher<Foundation.URL>
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishData(queue: Dispatch.DispatchQueue = .main, preprocessor: OnepayIPG.DataPreprocessor = DataResponseSerializer.defaultDataPreprocessor, emptyResponseCodes: Swift.Set<Swift.Int> = DataResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DataResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DownloadResponsePublisher<Foundation.Data>
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishString(queue: Dispatch.DispatchQueue = .main, preprocessor: OnepayIPG.DataPreprocessor = StringResponseSerializer.defaultDataPreprocessor, encoding: Swift.String.Encoding? = nil, emptyResponseCodes: Swift.Set<Swift.Int> = StringResponseSerializer.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = StringResponseSerializer.defaultEmptyRequestMethods) -> OnepayIPG.DownloadResponsePublisher<Swift.String>
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  @available(*, deprecated, message: "Renamed publishDecodable(type:queue:preprocessor:decoder:emptyResponseCodes:emptyRequestMethods).")
+  @_disfavoredOverload public func publishDecodable<T>(type: T.Type = T.self, queue: Dispatch.DispatchQueue = .main, preprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<T>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<T>.defaultEmptyResponseCodes, emptyResponseMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<T>.defaultEmptyRequestMethods) -> OnepayIPG.DownloadResponsePublisher<T> where T : Swift.Decodable
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishDecodable<T>(type: T.Type = T.self, queue: Dispatch.DispatchQueue = .main, preprocessor: OnepayIPG.DataPreprocessor = DecodableResponseSerializer<T>.defaultDataPreprocessor, decoder: OnepayIPG.DataDecoder = JSONDecoder(), emptyResponseCodes: Swift.Set<Swift.Int> = DecodableResponseSerializer<T>.defaultEmptyResponseCodes, emptyRequestMethods: Swift.Set<OnepayIPG.HTTPMethod> = DecodableResponseSerializer<T>.defaultEmptyRequestMethods) -> OnepayIPG.DownloadResponsePublisher<T> where T : Swift.Decodable
+}
+@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+extension OnepayIPG.DownloadResponsePublisher where Value == Foundation.URL? {
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public init(_ request: OnepayIPG.DownloadRequest, queue: Dispatch.DispatchQueue)
+}
+extension OnepayIPG.DownloadRequest {
+  @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, *)
+  public func publishUnserialized(on queue: Dispatch.DispatchQueue = .main) -> OnepayIPG.DownloadResponsePublisher<Foundation.URL?>
+}
+@_hasMissingDesignatedInitializers public class Request {
+  public enum State {
+    case initialized
+    case resumed
+    case suspended
+    case cancelled
+    case finished
+    public static func == (a: OnepayIPG.Request.State, b: OnepayIPG.Request.State) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  final public let id: Foundation.UUID
+  final public let underlyingQueue: Dispatch.DispatchQueue
+  final public let serializationQueue: Dispatch.DispatchQueue
+  final public let eventMonitor: OnepayIPG.EventMonitor?
+  final public let interceptor: OnepayIPG.RequestInterceptor?
+  weak public var delegate: OnepayIPG.RequestDelegate? {
+    get
+  }
+  public var state: OnepayIPG.Request.State {
+    get
+  }
+  public var isInitialized: Swift.Bool {
+    get
+  }
+  public var isResumed: Swift.Bool {
+    get
+  }
+  public var isSuspended: Swift.Bool {
+    get
+  }
+  public var isCancelled: Swift.Bool {
+    get
+  }
+  public var isFinished: Swift.Bool {
+    get
+  }
+  public typealias ProgressHandler = (Foundation.Progress) -> Swift.Void
+  final public let uploadProgress: Foundation.Progress
+  final public let downloadProgress: Foundation.Progress
+  public var redirectHandler: OnepayIPG.RedirectHandler? {
+    get
+  }
+  public var cachedResponseHandler: OnepayIPG.CachedResponseHandler? {
+    get
+  }
+  public var credential: Foundation.URLCredential? {
+    get
+  }
+  public var requests: [Foundation.URLRequest] {
+    get
+  }
+  public var firstRequest: Foundation.URLRequest? {
+    get
+  }
+  public var lastRequest: Foundation.URLRequest? {
+    get
+  }
+  public var request: Foundation.URLRequest? {
+    get
+  }
+  public var performedRequests: [Foundation.URLRequest] {
+    get
+  }
+  public var response: Foundation.HTTPURLResponse? {
+    get
+  }
+  public var tasks: [Foundation.URLSessionTask] {
+    get
+  }
+  public var firstTask: Foundation.URLSessionTask? {
+    get
+  }
+  public var lastTask: Foundation.URLSessionTask? {
+    get
+  }
+  public var task: Foundation.URLSessionTask? {
+    get
+  }
+  public var allMetrics: [Foundation.URLSessionTaskMetrics] {
+    get
+  }
+  public var firstMetrics: Foundation.URLSessionTaskMetrics? {
+    get
+  }
+  public var lastMetrics: Foundation.URLSessionTaskMetrics? {
+    get
+  }
+  public var metrics: Foundation.URLSessionTaskMetrics? {
+    get
+  }
+  public var retryCount: Swift.Int {
+    get
+  }
+  public var error: OnepayIPG.AFError? {
+    get
+  }
+  @discardableResult
+  public func cancel() -> Self
+  @discardableResult
+  public func suspend() -> Self
+  @discardableResult
+  public func resume() -> Self
+  @discardableResult
+  public func authenticate(username: Swift.String, password: Swift.String, persistence: Foundation.URLCredential.Persistence = .forSession) -> Self
+  @discardableResult
+  public func authenticate(with credential: Foundation.URLCredential) -> Self
+  @discardableResult
+  public func downloadProgress(queue: Dispatch.DispatchQueue = .main, closure: @escaping OnepayIPG.Request.ProgressHandler) -> Self
+  @discardableResult
+  public func uploadProgress(queue: Dispatch.DispatchQueue = .main, closure: @escaping OnepayIPG.Request.ProgressHandler) -> Self
+  @discardableResult
+  public func redirect(using handler: OnepayIPG.RedirectHandler) -> Self
+  @discardableResult
+  public func cacheResponse(using handler: OnepayIPG.CachedResponseHandler) -> Self
+  @discardableResult
+  public func cURLDescription(on queue: Dispatch.DispatchQueue, calling handler: @escaping (Swift.String) -> Swift.Void) -> Self
+  @discardableResult
+  public func cURLDescription(calling handler: @escaping (Swift.String) -> Swift.Void) -> Self
+  @discardableResult
+  public func onURLRequestCreation(on queue: Dispatch.DispatchQueue = .main, perform handler: @escaping (Foundation.URLRequest) -> Swift.Void) -> Self
+  @discardableResult
+  public func onURLSessionTaskCreation(on queue: Dispatch.DispatchQueue = .main, perform handler: @escaping (Foundation.URLSessionTask) -> Swift.Void) -> Self
+  @objc deinit
+}
+extension OnepayIPG.Request : Swift.Equatable {
+  public static func == (lhs: OnepayIPG.Request, rhs: OnepayIPG.Request) -> Swift.Bool
+}
+extension OnepayIPG.Request : Swift.Hashable {
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension OnepayIPG.Request : Swift.CustomStringConvertible {
+  public var description: Swift.String {
+    get
+  }
+}
+extension OnepayIPG.Request {
+  public func cURLDescription() -> Swift.String
+}
+public protocol RequestDelegate : AnyObject {
+  var sessionConfiguration: Foundation.URLSessionConfiguration { get }
+  var startImmediately: Swift.Bool { get }
+  func cleanup(after request: OnepayIPG.Request)
+  func retryResult(for request: OnepayIPG.Request, dueTo error: OnepayIPG.AFError, completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void)
+  func retryRequest(_ request: OnepayIPG.Request, withDelay timeDelay: Foundation.TimeInterval?)
+}
+@_hasMissingDesignatedInitializers public class DataRequest : OnepayIPG.Request {
+  final public let convertible: OnepayIPG.URLRequestConvertible
+  public var data: Foundation.Data? {
+    get
+  }
+  @discardableResult
+  public func validate(_ validation: @escaping OnepayIPG.DataRequest.Validation) -> Self
+  @objc deinit
+}
+@_hasMissingDesignatedInitializers final public class DataStreamRequest : OnepayIPG.Request {
+  public typealias Handler<Success, Failure> = (OnepayIPG.DataStreamRequest.Stream<Success, Failure>) throws -> Swift.Void where Failure : Swift.Error
+  public struct Stream<Success, Failure> where Failure : Swift.Error {
+    public let event: OnepayIPG.DataStreamRequest.Event<Success, Failure>
+    public let token: OnepayIPG.DataStreamRequest.CancellationToken
+    public func cancel()
+  }
+  public enum Event<Success, Failure> where Failure : Swift.Error {
+    case stream(Swift.Result<Success, Failure>)
+    case complete(OnepayIPG.DataStreamRequest.Completion)
+  }
+  public struct Completion {
+    public let request: Foundation.URLRequest?
+    public let response: Foundation.HTTPURLResponse?
+    public let metrics: Foundation.URLSessionTaskMetrics?
+    public let error: OnepayIPG.AFError?
+  }
+  public struct CancellationToken {
+    public func cancel()
+  }
+  final public let convertible: OnepayIPG.URLRequestConvertible
+  final public let automaticallyCancelOnStreamError: Swift.Bool
+  @discardableResult
+  final public func validate(_ validation: @escaping OnepayIPG.DataStreamRequest.Validation) -> Self
+  final public func asInputStream(bufferSize: Swift.Int = 1024) -> Foundation.InputStream?
+  @objc deinit
+}
+extension OnepayIPG.DataStreamRequest.Stream {
+  public var result: Swift.Result<Success, Failure>? {
+    get
+  }
+  public var value: Success? {
+    get
+  }
+  public var error: Failure? {
+    get
+  }
+  public var completion: OnepayIPG.DataStreamRequest.Completion? {
+    get
+  }
+}
+@_hasMissingDesignatedInitializers public class DownloadRequest : OnepayIPG.Request {
+  public struct Options : Swift.OptionSet {
+    public static let createIntermediateDirectories: OnepayIPG.DownloadRequest.Options
+    public static let removePreviousFile: OnepayIPG.DownloadRequest.Options
+    public let rawValue: Swift.Int
+    public init(rawValue: Swift.Int)
+    public typealias ArrayLiteralElement = OnepayIPG.DownloadRequest.Options
+    public typealias Element = OnepayIPG.DownloadRequest.Options
+    public typealias RawValue = Swift.Int
+  }
+  public typealias Destination = (_ temporaryURL: Foundation.URL, _ response: Foundation.HTTPURLResponse) -> (destinationURL: Foundation.URL, options: OnepayIPG.DownloadRequest.Options)
+  public class func suggestedDownloadDestination(for directory: Foundation.FileManager.SearchPathDirectory = .documentDirectory, in domain: Foundation.FileManager.SearchPathDomainMask = .userDomainMask, options: OnepayIPG.DownloadRequest.Options = []) -> OnepayIPG.DownloadRequest.Destination
+  public enum Downloadable {
+    case request(OnepayIPG.URLRequestConvertible)
+    case resumeData(Foundation.Data)
+  }
+  public var resumeData: Foundation.Data? {
+    get
+  }
+  public var fileURL: Foundation.URL? {
+    get
+  }
+  final public let downloadable: OnepayIPG.DownloadRequest.Downloadable
+  public func task(forResumeData data: Foundation.Data, using session: Foundation.URLSession) -> Foundation.URLSessionTask
+  @discardableResult
+  override public func cancel() -> Self
+  @discardableResult
+  public func cancel(producingResumeData shouldProduceResumeData: Swift.Bool) -> Self
+  @discardableResult
+  public func cancel(byProducingResumeData completionHandler: @escaping (_ data: Foundation.Data?) -> Swift.Void) -> Self
+  @discardableResult
+  public func validate(_ validation: @escaping OnepayIPG.DownloadRequest.Validation) -> Self
+  @objc deinit
+}
+@_hasMissingDesignatedInitializers public class UploadRequest : OnepayIPG.DataRequest {
+  public enum Uploadable {
+    case data(Foundation.Data)
+    case file(Foundation.URL, shouldRemove: Swift.Bool)
+    case stream(Foundation.InputStream)
+  }
+  final public let upload: OnepayIPG.UploadableConvertible
+  final public let fileManager: Foundation.FileManager
+  public var uploadable: OnepayIPG.UploadRequest.Uploadable?
+  public func cleanup()
+  @objc deinit
+}
+public protocol UploadableConvertible {
+  func createUploadable() throws -> OnepayIPG.UploadRequest.Uploadable
+}
+extension OnepayIPG.UploadRequest.Uploadable : OnepayIPG.UploadableConvertible {
+  public func createUploadable() throws -> OnepayIPG.UploadRequest.Uploadable
+}
+public protocol UploadConvertible : OnepayIPG.URLRequestConvertible, OnepayIPG.UploadableConvertible {
+}
+@objc @_inheritsConvenienceInitializers @_Concurrency.MainActor(unsafe) public class GatewayMainVC : UIKit.UIViewController {
+  @_Concurrency.MainActor(unsafe) public static let CONTAINS_STORYBOARD: Swift.String
+  @_Concurrency.MainActor(unsafe) public static let MAIN_GATEWAY: Swift.String
+  @_Concurrency.MainActor(unsafe) @objc override dynamic public func viewDidLoad()
+  @_Concurrency.MainActor(unsafe) @objc override dynamic public func touchesBegan(_ touches: Swift.Set<UIKit.UITouch>, with event: UIKit.UIEvent?)
+  @_Concurrency.MainActor(unsafe) public func setInitData(ipgInitData: OnepayIPG.OnepayIPGInit)
+  @_Concurrency.MainActor(unsafe) public func setIPGDelegate(onepayIPGDelegate: OnepayIPG.OnepayIPGDelegate)
+  @_Concurrency.MainActor(unsafe) @objc override dynamic public func prepare(for segue: UIKit.UIStoryboardSegue, sender: Any?)
+  @_Concurrency.MainActor(unsafe) @objc override dynamic public init(nibName nibNameOrNil: Swift.String?, bundle nibBundleOrNil: Foundation.Bundle?)
+  @_Concurrency.MainActor(unsafe) @objc required dynamic public init?(coder: Foundation.NSCoder)
+  @objc deinit
+}
+public enum Gateway3DSecureResult {
+  case completed(gatewayResult: OnepayIPG.OnepayGetwayResult)
+  case error(OnepayIPG.Gateway3DSecureError)
+  case cancelled
+}
+public enum Gateway3DSecureError : Swift.Error {
+  case missingGatewayResponse
+  case mappingError
+  public static func == (a: OnepayIPG.Gateway3DSecureError, b: OnepayIPG.Gateway3DSecureError) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+@objc @_inheritsConvenienceInitializers @_Concurrency.MainActor(unsafe) public class Gateway3DSecureViewController : UIKit.UIViewController, WebKit.WKNavigationDelegate {
+  @_Concurrency.MainActor(unsafe) public var navBar: UIKit.UINavigationBar!
+  @_Concurrency.MainActor(unsafe) public var cancelButton: UIKit.UIBarButtonItem!
+  @_Concurrency.MainActor(unsafe) public var activityIndicator: UIKit.UIActivityIndicatorView!
+  @_Concurrency.MainActor(unsafe) @objc override dynamic public init(nibName nibNameOrNil: Swift.String?, bundle nibBundleOrNil: Foundation.Bundle?)
+  @_Concurrency.MainActor(unsafe) @objc required dynamic public init?(coder aDecoder: Foundation.NSCoder)
+  @_Concurrency.MainActor(unsafe) public func authenticatePayer(htmlBodyContent: Swift.String, handler: @escaping (OnepayIPG.Gateway3DSecureViewController, OnepayIPG.Gateway3DSecureResult) -> Swift.Void)
+  @_Concurrency.MainActor(unsafe) @objc public func webView(_ webView: WebKit.WKWebView, didStartProvisionalNavigation navigation: WebKit.WKNavigation!)
+  @_Concurrency.MainActor(unsafe) @objc public func webView(_ webView: WebKit.WKWebView, didFinish navigation: WebKit.WKNavigation!)
+  @_Concurrency.MainActor(unsafe) @objc public func webView(_ webView: WebKit.WKWebView, decidePolicyFor navigationAction: WebKit.WKNavigationAction, decisionHandler: @escaping (WebKit.WKNavigationActionPolicy) -> Swift.Void)
+  @objc deinit
+}
+public struct OnepayGetwayResult : Swift.Decodable {
+  public var status: Swift.Int
+  public var description: Swift.String
+  public init(from decoder: Swift.Decoder) throws
+}
+public enum HTTPMethodMPG : Swift.String {
+  case get
+  case put
+  case post
+  case delete
+  case head
+  case trace
+  public init?(rawValue: Swift.String)
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+extension Foundation.URLRequest {
+  public var method: OnepayIPG.HTTPMethod? {
+    get
+    set
+  }
+  public func validate() throws
+}
+extension OnepayIPG.Request {
+  public static let didResumeNotification: Foundation.Notification.Name
+  public static let didSuspendNotification: Foundation.Notification.Name
+  public static let didCancelNotification: Foundation.Notification.Name
+  public static let didFinishNotification: Foundation.Notification.Name
+  public static let didResumeTaskNotification: Foundation.Notification.Name
+  public static let didSuspendTaskNotification: Foundation.Notification.Name
+  public static let didCancelTaskNotification: Foundation.Notification.Name
+  public static let didCompleteTaskNotification: Foundation.Notification.Name
+}
+extension Foundation.Notification {
+  public var request: OnepayIPG.Request? {
+    get
+  }
+}
+@_hasMissingDesignatedInitializers final public class AlamofireNotifications : OnepayIPG.EventMonitor {
+  final public func requestDidResume(_ request: OnepayIPG.Request)
+  final public func requestDidSuspend(_ request: OnepayIPG.Request)
+  final public func requestDidCancel(_ request: OnepayIPG.Request)
+  final public func requestDidFinish(_ request: OnepayIPG.Request)
+  final public func request(_ request: OnepayIPG.Request, didResumeTask task: Foundation.URLSessionTask)
+  final public func request(_ request: OnepayIPG.Request, didSuspendTask task: Foundation.URLSessionTask)
+  final public func request(_ request: OnepayIPG.Request, didCancelTask task: Foundation.URLSessionTask)
+  final public func request(_ request: OnepayIPG.Request, didCompleteTask task: Foundation.URLSessionTask, with error: OnepayIPG.AFError?)
+  @objc deinit
+}
+public enum AFError : Swift.Error {
+  public enum MultipartEncodingFailureReason {
+    case bodyPartURLInvalid(url: Foundation.URL)
+    case bodyPartFilenameInvalid(in: Foundation.URL)
+    case bodyPartFileNotReachable(at: Foundation.URL)
+    case bodyPartFileNotReachableWithError(atURL: Foundation.URL, error: Swift.Error)
+    case bodyPartFileIsDirectory(at: Foundation.URL)
+    case bodyPartFileSizeNotAvailable(at: Foundation.URL)
+    case bodyPartFileSizeQueryFailedWithError(forURL: Foundation.URL, error: Swift.Error)
+    case bodyPartInputStreamCreationFailed(for: Foundation.URL)
+    case outputStreamCreationFailed(for: Foundation.URL)
+    case outputStreamFileAlreadyExists(at: Foundation.URL)
+    case outputStreamURLInvalid(url: Foundation.URL)
+    case outputStreamWriteFailed(error: Swift.Error)
+    case inputStreamReadFailed(error: Swift.Error)
+  }
+  public struct UnexpectedInputStreamLength : Swift.Error {
+    public var bytesExpected: Swift.UInt64
+    public var bytesRead: Swift.UInt64
+  }
+  public enum ParameterEncodingFailureReason {
+    case missingURL
+    case jsonEncodingFailed(error: Swift.Error)
+    case customEncodingFailed(error: Swift.Error)
+  }
+  public enum ParameterEncoderFailureReason {
+    public enum RequiredComponent {
+      case url
+      case httpMethod(rawValue: Swift.String)
+    }
+    case missingRequiredComponent(OnepayIPG.AFError.ParameterEncoderFailureReason.RequiredComponent)
+    case encoderFailed(error: Swift.Error)
+  }
+  public enum ResponseValidationFailureReason {
+    case dataFileNil
+    case dataFileReadFailed(at: Foundation.URL)
+    case missingContentType(acceptableContentTypes: [Swift.String])
+    case unacceptableContentType(acceptableContentTypes: [Swift.String], responseContentType: Swift.String)
+    case unacceptableStatusCode(code: Swift.Int)
+    case customValidationFailed(error: Swift.Error)
+  }
+  public enum ResponseSerializationFailureReason {
+    case inputDataNilOrZeroLength
+    case inputFileNil
+    case inputFileReadFailed(at: Foundation.URL)
+    case stringSerializationFailed(encoding: Swift.String.Encoding)
+    case jsonSerializationFailed(error: Swift.Error)
+    case decodingFailed(error: Swift.Error)
+    case customSerializationFailed(error: Swift.Error)
+    case invalidEmptyResponse(type: Swift.String)
+  }
+  public enum ServerTrustFailureReason {
+    public struct Output {
+      public let host: Swift.String
+      public let trust: Security.SecTrust
+      public let status: Darwin.OSStatus
+      public let result: Security.SecTrustResultType
+    }
+    case noRequiredEvaluator(host: Swift.String)
+    case noCertificatesFound
+    case noPublicKeysFound
+    case policyApplicationFailed(trust: Security.SecTrust, policy: Security.SecPolicy, status: Darwin.OSStatus)
+    case settingAnchorCertificatesFailed(status: Darwin.OSStatus, certificates: [Security.SecCertificate])
+    case revocationPolicyCreationFailed
+    case trustEvaluationFailed(error: Swift.Error?)
+    case defaultEvaluationFailed(output: OnepayIPG.AFError.ServerTrustFailureReason.Output)
+    case hostValidationFailed(output: OnepayIPG.AFError.ServerTrustFailureReason.Output)
+    case revocationCheckFailed(output: OnepayIPG.AFError.ServerTrustFailureReason.Output, options: OnepayIPG.RevocationTrustEvaluator.Options)
+    case certificatePinningFailed(host: Swift.String, trust: Security.SecTrust, pinnedCertificates: [Security.SecCertificate], serverCertificates: [Security.SecCertificate])
+    case publicKeyPinningFailed(host: Swift.String, trust: Security.SecTrust, pinnedKeys: [Security.SecKey], serverKeys: [Security.SecKey])
+    case customEvaluationFailed(error: Swift.Error)
+  }
+  public enum URLRequestValidationFailureReason {
+    case bodyDataInGETRequest(Foundation.Data)
+  }
+  case createUploadableFailed(error: Swift.Error)
+  case createURLRequestFailed(error: Swift.Error)
+  case downloadedFileMoveFailed(error: Swift.Error, source: Foundation.URL, destination: Foundation.URL)
+  case explicitlyCancelled
+  case invalidURL(url: OnepayIPG.URLConvertible)
+  case multipartEncodingFailed(reason: OnepayIPG.AFError.MultipartEncodingFailureReason)
+  case parameterEncodingFailed(reason: OnepayIPG.AFError.ParameterEncodingFailureReason)
+  case parameterEncoderFailed(reason: OnepayIPG.AFError.ParameterEncoderFailureReason)
+  case requestAdaptationFailed(error: Swift.Error)
+  case requestRetryFailed(retryError: Swift.Error, originalError: Swift.Error)
+  case responseValidationFailed(reason: OnepayIPG.AFError.ResponseValidationFailureReason)
+  case responseSerializationFailed(reason: OnepayIPG.AFError.ResponseSerializationFailureReason)
+  case serverTrustEvaluationFailed(reason: OnepayIPG.AFError.ServerTrustFailureReason)
+  case sessionDeinitialized
+  case sessionInvalidated(error: Swift.Error?)
+  case sessionTaskFailed(error: Swift.Error)
+  case urlRequestValidationFailed(reason: OnepayIPG.AFError.URLRequestValidationFailureReason)
+}
+extension Swift.Error {
+  public var asAFError: OnepayIPG.AFError? {
+    get
+  }
+  public func asAFError(orFailWith message: @autoclosure () -> Swift.String, file: Swift.StaticString = #file, line: Swift.UInt = #line) -> OnepayIPG.AFError
+}
+extension OnepayIPG.AFError {
+  public var isSessionDeinitializedError: Swift.Bool {
+    get
+  }
+  public var isSessionInvalidatedError: Swift.Bool {
+    get
+  }
+  public var isExplicitlyCancelledError: Swift.Bool {
+    get
+  }
+  public var isInvalidURLError: Swift.Bool {
+    get
+  }
+  public var isParameterEncodingError: Swift.Bool {
+    get
+  }
+  public var isParameterEncoderError: Swift.Bool {
+    get
+  }
+  public var isMultipartEncodingError: Swift.Bool {
+    get
+  }
+  public var isRequestAdaptationError: Swift.Bool {
+    get
+  }
+  public var isResponseValidationError: Swift.Bool {
+    get
+  }
+  public var isResponseSerializationError: Swift.Bool {
+    get
+  }
+  public var isServerTrustEvaluationError: Swift.Bool {
+    get
+  }
+  public var isRequestRetryError: Swift.Bool {
+    get
+  }
+  public var isCreateUploadableError: Swift.Bool {
+    get
+  }
+  public var isCreateURLRequestError: Swift.Bool {
+    get
+  }
+  public var isDownloadedFileMoveError: Swift.Bool {
+    get
+  }
+  public var isSessionTaskError: Swift.Bool {
+    get
+  }
+}
+extension OnepayIPG.AFError {
+  public var urlConvertible: OnepayIPG.URLConvertible? {
+    get
+  }
+  public var url: Foundation.URL? {
+    get
+  }
+  public var underlyingError: Swift.Error? {
+    get
+  }
+  public var acceptableContentTypes: [Swift.String]? {
+    get
+  }
+  public var responseContentType: Swift.String? {
+    get
+  }
+  public var responseCode: Swift.Int? {
+    get
+  }
+  public var failedStringEncoding: Swift.String.Encoding? {
+    get
+  }
+  public var sourceURL: Foundation.URL? {
+    get
+  }
+  public var destinationURL: Foundation.URL? {
+    get
+  }
+  public var downloadResumeData: Foundation.Data? {
+    get
+  }
+}
+extension OnepayIPG.AFError : Foundation.LocalizedError {
+  public var errorDescription: Swift.String? {
+    get
+  }
+}
+public typealias AFResult<Success> = Swift.Result<Success, OnepayIPG.AFError>
+open class RetryPolicy : OnepayIPG.RequestInterceptor {
+  public static let defaultRetryLimit: Swift.UInt
+  public static let defaultExponentialBackoffBase: Swift.UInt
+  public static let defaultExponentialBackoffScale: Swift.Double
+  public static let defaultRetryableHTTPMethods: Swift.Set<OnepayIPG.HTTPMethod>
+  public static let defaultRetryableHTTPStatusCodes: Swift.Set<Swift.Int>
+  public static let defaultRetryableURLErrorCodes: Swift.Set<Foundation.URLError.Code>
+  final public let retryLimit: Swift.UInt
+  final public let exponentialBackoffBase: Swift.UInt
+  final public let exponentialBackoffScale: Swift.Double
+  final public let retryableHTTPMethods: Swift.Set<OnepayIPG.HTTPMethod>
+  final public let retryableHTTPStatusCodes: Swift.Set<Swift.Int>
+  final public let retryableURLErrorCodes: Swift.Set<Foundation.URLError.Code>
+  public init(retryLimit: Swift.UInt = RetryPolicy.defaultRetryLimit, exponentialBackoffBase: Swift.UInt = RetryPolicy.defaultExponentialBackoffBase, exponentialBackoffScale: Swift.Double = RetryPolicy.defaultExponentialBackoffScale, retryableHTTPMethods: Swift.Set<OnepayIPG.HTTPMethod> = RetryPolicy.defaultRetryableHTTPMethods, retryableHTTPStatusCodes: Swift.Set<Swift.Int> = RetryPolicy.defaultRetryableHTTPStatusCodes, retryableURLErrorCodes: Swift.Set<Foundation.URLError.Code> = RetryPolicy.defaultRetryableURLErrorCodes)
+  open func retry(_ request: OnepayIPG.Request, for session: OnepayIPG.Session, dueTo error: Swift.Error, completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void)
+  open func shouldRetry(request: OnepayIPG.Request, dueTo error: Swift.Error) -> Swift.Bool
+  @objc deinit
+}
+extension OnepayIPG.RequestInterceptor where Self == OnepayIPG.RetryPolicy {
+  public static var retryPolicy: OnepayIPG.RetryPolicy {
+    get
+  }
+  public static func retryPolicy(retryLimit: Swift.UInt = RetryPolicy.defaultRetryLimit, exponentialBackoffBase: Swift.UInt = RetryPolicy.defaultExponentialBackoffBase, exponentialBackoffScale: Swift.Double = RetryPolicy.defaultExponentialBackoffScale, retryableHTTPMethods: Swift.Set<OnepayIPG.HTTPMethod> = RetryPolicy.defaultRetryableHTTPMethods, retryableHTTPStatusCodes: Swift.Set<Swift.Int> = RetryPolicy.defaultRetryableHTTPStatusCodes, retryableURLErrorCodes: Swift.Set<Foundation.URLError.Code> = RetryPolicy.defaultRetryableURLErrorCodes) -> OnepayIPG.RetryPolicy
+}
+open class ConnectionLostRetryPolicy : OnepayIPG.RetryPolicy {
+  public init(retryLimit: Swift.UInt = RetryPolicy.defaultRetryLimit, exponentialBackoffBase: Swift.UInt = RetryPolicy.defaultExponentialBackoffBase, exponentialBackoffScale: Swift.Double = RetryPolicy.defaultExponentialBackoffScale, retryableHTTPMethods: Swift.Set<OnepayIPG.HTTPMethod> = RetryPolicy.defaultRetryableHTTPMethods)
+  @objc deinit
+}
+extension OnepayIPG.RequestInterceptor where Self == OnepayIPG.ConnectionLostRetryPolicy {
+  public static var connectionLostRetryPolicy: OnepayIPG.ConnectionLostRetryPolicy {
+    get
+  }
+  public static func connectionLostRetryPolicy(retryLimit: Swift.UInt = RetryPolicy.defaultRetryLimit, exponentialBackoffBase: Swift.UInt = RetryPolicy.defaultExponentialBackoffBase, exponentialBackoffScale: Swift.Double = RetryPolicy.defaultExponentialBackoffScale, retryableHTTPMethods: Swift.Set<OnepayIPG.HTTPMethod> = RetryPolicy.defaultRetryableHTTPMethods) -> OnepayIPG.ConnectionLostRetryPolicy
+}
+public protocol URLConvertible {
+  func asURL() throws -> Foundation.URL
+}
+extension Swift.String : OnepayIPG.URLConvertible {
+  public func asURL() throws -> Foundation.URL
+}
+extension Foundation.URL : OnepayIPG.URLConvertible {
+  public func asURL() throws -> Foundation.URL
+}
+extension Foundation.URLComponents : OnepayIPG.URLConvertible {
+  public func asURL() throws -> Foundation.URL
+}
+public protocol URLRequestConvertible {
+  func asURLRequest() throws -> Foundation.URLRequest
+}
+extension OnepayIPG.URLRequestConvertible {
+  public var urlRequest: Foundation.URLRequest? {
+    get
+  }
+}
+extension Foundation.URLRequest : OnepayIPG.URLRequestConvertible {
+  public func asURLRequest() throws -> Foundation.URLRequest
+}
+extension Foundation.URLRequest {
+  public init(url: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod, headers: OnepayIPG.HTTPHeaders? = nil) throws
+}
+open class Session {
+  public static let `default`: OnepayIPG.Session
+  final public let session: Foundation.URLSession
+  final public let delegate: OnepayIPG.SessionDelegate
+  final public let rootQueue: Dispatch.DispatchQueue
+  final public let startRequestsImmediately: Swift.Bool
+  final public let requestQueue: Dispatch.DispatchQueue
+  final public let serializationQueue: Dispatch.DispatchQueue
+  final public let interceptor: OnepayIPG.RequestInterceptor?
+  final public let serverTrustManager: OnepayIPG.ServerTrustManager?
+  final public let redirectHandler: OnepayIPG.RedirectHandler?
+  final public let cachedResponseHandler: OnepayIPG.CachedResponseHandler?
+  final public let eventMonitor: OnepayIPG.CompositeEventMonitor
+  final public let defaultEventMonitors: [OnepayIPG.EventMonitor]
+  public init(session: Foundation.URLSession, delegate: OnepayIPG.SessionDelegate, rootQueue: Dispatch.DispatchQueue, startRequestsImmediately: Swift.Bool = true, requestQueue: Dispatch.DispatchQueue? = nil, serializationQueue: Dispatch.DispatchQueue? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, serverTrustManager: OnepayIPG.ServerTrustManager? = nil, redirectHandler: OnepayIPG.RedirectHandler? = nil, cachedResponseHandler: OnepayIPG.CachedResponseHandler? = nil, eventMonitors: [OnepayIPG.EventMonitor] = [])
+  convenience public init(configuration: Foundation.URLSessionConfiguration = URLSessionConfiguration.af.default, delegate: OnepayIPG.SessionDelegate = SessionDelegate(), rootQueue: Dispatch.DispatchQueue = DispatchQueue(label: "org.alamofire.session.rootQueue"), startRequestsImmediately: Swift.Bool = true, requestQueue: Dispatch.DispatchQueue? = nil, serializationQueue: Dispatch.DispatchQueue? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, serverTrustManager: OnepayIPG.ServerTrustManager? = nil, redirectHandler: OnepayIPG.RedirectHandler? = nil, cachedResponseHandler: OnepayIPG.CachedResponseHandler? = nil, eventMonitors: [OnepayIPG.EventMonitor] = [])
+  @objc deinit
+  public func withAllRequests(perform action: @escaping (Swift.Set<OnepayIPG.Request>) -> Swift.Void)
+  public func cancelAllRequests(completingOnQueue queue: Dispatch.DispatchQueue = .main, completion: (() -> Swift.Void)? = nil)
+  public typealias RequestModifier = (inout Foundation.URLRequest) throws -> Swift.Void
+  open func request(_ convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .get, parameters: OnepayIPG.Parameters? = nil, encoding: OnepayIPG.ParameterEncoding = URLEncoding.default, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.DataRequest
+  open func request<Parameters>(_ convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .get, parameters: Parameters? = nil, encoder: OnepayIPG.ParameterEncoder = URLEncodedFormParameterEncoder.default, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.DataRequest where Parameters : Swift.Encodable
+  open func request(_ convertible: OnepayIPG.URLRequestConvertible, interceptor: OnepayIPG.RequestInterceptor? = nil) -> OnepayIPG.DataRequest
+  open func streamRequest<Parameters>(_ convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .get, parameters: Parameters? = nil, encoder: OnepayIPG.ParameterEncoder = URLEncodedFormParameterEncoder.default, headers: OnepayIPG.HTTPHeaders? = nil, automaticallyCancelOnStreamError: Swift.Bool = false, interceptor: OnepayIPG.RequestInterceptor? = nil, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.DataStreamRequest where Parameters : Swift.Encodable
+  open func streamRequest(_ convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .get, headers: OnepayIPG.HTTPHeaders? = nil, automaticallyCancelOnStreamError: Swift.Bool = false, interceptor: OnepayIPG.RequestInterceptor? = nil, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.DataStreamRequest
+  open func streamRequest(_ convertible: OnepayIPG.URLRequestConvertible, automaticallyCancelOnStreamError: Swift.Bool = false, interceptor: OnepayIPG.RequestInterceptor? = nil) -> OnepayIPG.DataStreamRequest
+  open func download(_ convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .get, parameters: OnepayIPG.Parameters? = nil, encoding: OnepayIPG.ParameterEncoding = URLEncoding.default, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, requestModifier: OnepayIPG.Session.RequestModifier? = nil, to destination: OnepayIPG.DownloadRequest.Destination? = nil) -> OnepayIPG.DownloadRequest
+  open func download<Parameters>(_ convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .get, parameters: Parameters? = nil, encoder: OnepayIPG.ParameterEncoder = URLEncodedFormParameterEncoder.default, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, requestModifier: OnepayIPG.Session.RequestModifier? = nil, to destination: OnepayIPG.DownloadRequest.Destination? = nil) -> OnepayIPG.DownloadRequest where Parameters : Swift.Encodable
+  open func download(_ convertible: OnepayIPG.URLRequestConvertible, interceptor: OnepayIPG.RequestInterceptor? = nil, to destination: OnepayIPG.DownloadRequest.Destination? = nil) -> OnepayIPG.DownloadRequest
+  open func download(resumingWith data: Foundation.Data, interceptor: OnepayIPG.RequestInterceptor? = nil, to destination: OnepayIPG.DownloadRequest.Destination? = nil) -> OnepayIPG.DownloadRequest
+  open func upload(_ data: Foundation.Data, to convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .post, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.UploadRequest
+  open func upload(_ data: Foundation.Data, with convertible: OnepayIPG.URLRequestConvertible, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default) -> OnepayIPG.UploadRequest
+  open func upload(_ fileURL: Foundation.URL, to convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .post, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.UploadRequest
+  open func upload(_ fileURL: Foundation.URL, with convertible: OnepayIPG.URLRequestConvertible, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default) -> OnepayIPG.UploadRequest
+  open func upload(_ stream: Foundation.InputStream, to convertible: OnepayIPG.URLConvertible, method: OnepayIPG.HTTPMethod = .post, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.UploadRequest
+  open func upload(_ stream: Foundation.InputStream, with convertible: OnepayIPG.URLRequestConvertible, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default) -> OnepayIPG.UploadRequest
+  open func upload(multipartFormData: @escaping (OnepayIPG.MultipartFormData) -> Swift.Void, to url: OnepayIPG.URLConvertible, usingThreshold encodingMemoryThreshold: Swift.UInt64 = MultipartFormData.encodingMemoryThreshold, method: OnepayIPG.HTTPMethod = .post, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.UploadRequest
+  open func upload(multipartFormData: @escaping (OnepayIPG.MultipartFormData) -> Swift.Void, with request: OnepayIPG.URLRequestConvertible, usingThreshold encodingMemoryThreshold: Swift.UInt64 = MultipartFormData.encodingMemoryThreshold, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default) -> OnepayIPG.UploadRequest
+  open func upload(multipartFormData: OnepayIPG.MultipartFormData, to url: OnepayIPG.URLConvertible, usingThreshold encodingMemoryThreshold: Swift.UInt64 = MultipartFormData.encodingMemoryThreshold, method: OnepayIPG.HTTPMethod = .post, headers: OnepayIPG.HTTPHeaders? = nil, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default, requestModifier: OnepayIPG.Session.RequestModifier? = nil) -> OnepayIPG.UploadRequest
+  open func upload(multipartFormData: OnepayIPG.MultipartFormData, with request: OnepayIPG.URLRequestConvertible, usingThreshold encodingMemoryThreshold: Swift.UInt64 = MultipartFormData.encodingMemoryThreshold, interceptor: OnepayIPG.RequestInterceptor? = nil, fileManager: Foundation.FileManager = .default) -> OnepayIPG.UploadRequest
+}
+extension OnepayIPG.Session : OnepayIPG.RequestDelegate {
+  public var sessionConfiguration: Foundation.URLSessionConfiguration {
+    get
+  }
+  public var startImmediately: Swift.Bool {
+    get
+  }
+  public func cleanup(after request: OnepayIPG.Request)
+  public func retryResult(for request: OnepayIPG.Request, dueTo error: OnepayIPG.AFError, completion: @escaping (OnepayIPG.RetryResult) -> Swift.Void)
+  public func retryRequest(_ request: OnepayIPG.Request, withDelay timeDelay: Foundation.TimeInterval?)
+}
+public enum GatewayError : Swift.Error, Swift.CustomStringConvertible {
+  case failedRequest(Swift.Int, Swift.String)
+  case invalidAPIVersion(Swift.String)
+  case missingResponse
+  public var description: Swift.String {
+    get
+  }
+}
+extension OnepayIPG.URLEncoding.Destination : Swift.Equatable {}
+extension OnepayIPG.URLEncoding.Destination : Swift.Hashable {}
+extension OnepayIPG.URLEncoding.ArrayEncoding : Swift.Equatable {}
+extension OnepayIPG.URLEncoding.ArrayEncoding : Swift.Hashable {}
+extension OnepayIPG.URLEncoding.BoolEncoding : Swift.Equatable {}
+extension OnepayIPG.URLEncoding.BoolEncoding : Swift.Hashable {}
+extension OnepayIPG.JSONEncoding.Error : Swift.Equatable {}
+extension OnepayIPG.JSONEncoding.Error : Swift.Hashable {}
+extension OnepayIPG.URLEncodedFormParameterEncoder.Destination : Swift.Equatable {}
+extension OnepayIPG.URLEncodedFormParameterEncoder.Destination : Swift.Hashable {}
+extension OnepayIPG.CurrencyTypes : Swift.Equatable {}
+extension OnepayIPG.CurrencyTypes : Swift.Hashable {}
+extension OnepayIPG.CurrencyTypes : Swift.RawRepresentable {}
+extension OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus.ConnectionType : Swift.Equatable {}
+extension OnepayIPG.NetworkReachabilityManager.NetworkReachabilityStatus.ConnectionType : Swift.Hashable {}
+extension OnepayIPG.AuthenticationError : Swift.Equatable {}
+extension OnepayIPG.AuthenticationError : Swift.Hashable {}
+extension OnepayIPG.URLEncodedFormEncoder.ArrayEncoding : Swift.Equatable {}
+extension OnepayIPG.URLEncodedFormEncoder.ArrayEncoding : Swift.Hashable {}
+extension OnepayIPG.URLEncodedFormEncoder.BoolEncoding : Swift.Equatable {}
+extension OnepayIPG.URLEncodedFormEncoder.BoolEncoding : Swift.Hashable {}
+extension OnepayIPG.URLEncodedFormEncoder.SpaceEncoding : Swift.Equatable {}
+extension OnepayIPG.URLEncodedFormEncoder.SpaceEncoding : Swift.Hashable {}
+extension OnepayIPG.Request.State : Swift.Equatable {}
+extension OnepayIPG.Request.State : Swift.Hashable {}
+extension OnepayIPG.Gateway3DSecureError : Swift.Equatable {}
+extension OnepayIPG.Gateway3DSecureError : Swift.Hashable {}
+extension OnepayIPG.HTTPMethodMPG : Swift.Equatable {}
+extension OnepayIPG.HTTPMethodMPG : Swift.Hashable {}
+extension OnepayIPG.HTTPMethodMPG : Swift.RawRepresentable {}

@@ -1,0 +1,11 @@
+framework module OnepayIPG {
+  umbrella header "OnepayIPG.h"
+
+  export *
+  module * { export * }
+}
+
+module OnepayIPG.Swift {
+    header "OnepayIPG-Swift.h"
+    requires objc
+}
