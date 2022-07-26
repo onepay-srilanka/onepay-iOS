@@ -566,6 +566,9 @@ extension OnepayIPG.AlamofireExtension where ExtendedType == Security.SecTrustRe
     get
   }
 }
+extension UIKit.UIFont {
+  public static func loadFonts()
+}
 public struct HTTPHeaders {
   public init()
   public init(_ headers: [OnepayIPG.HTTPHeader])
